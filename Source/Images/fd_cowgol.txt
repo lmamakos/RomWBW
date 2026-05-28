@@ -1,0 +1,6 @@
+@Label="Cowgol"
+@SysImage="../ZSDOS/zsys_wbw.sys"
+#
+# Add the ReadMe document
+#
+d_cowgol/ReadMe.txt 0:

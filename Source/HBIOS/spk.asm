@@ -1,26 +1,45 @@
 ;======================================================================
 ;
-;	BIT MODE SOUND DRIVER FOR SBC V2 USING BIT 0 OF RTC DRIVER
+;	BIT MODE SOUND DRIVER FOR USING 1 BIT OF AN IO PORT
+;	TAKING CARE NOT TO CHANGE OTHER BITS
 ;
 ;======================================================================
 ;
 ;	LIMITATIONS -	CPU FREQUENCY ADJUSTMENT LIMITED TO 1MHZ RESOLUTION
-;			QUARTER TONES NOT SUPPORTED
+;			EIGHTH TONES NOT SUPPORTED
 ;			DURATION FIXED TO 1 SECOND.
 ;			NO VOLUME ADJUSTMENT DUE TO HARDWARE LIMITATION
 ;======================================================================
 ;
+;--------------------------------------------------------------------------------------------------
+;   HBIOS MODULE HEADER
+;--------------------------------------------------------------------------------------------------
+;
+ORG_SP	.EQU	$
+;
+	.DW	SIZ_SP			; MODULE SIZE
+	.DW	SP_INITPHASE		; ADR OF INIT PHASE HANDLER
+;
+SP_INITPHASE:
+	; INIT PHASE HANDLER, A=PHASE
+	;CP	HB_PHASE_PREINIT	; PREINIT PHASE?
+	;JP	Z,SP_PREINIT		; DO PREINIT
+	CP	HB_PHASE_INIT		; INIT PHASE?
+	JP	Z,SP_INIT		; DO INIT
+	RET				; DONE
+;
 ;	DRIVER FUNCTION TABLE AND INSTANCE DATA
 ;
 SP_FNTBL:
-	.DW	SP_STUB			; SP_RESET
-	.DW	SP_STUB			; SP_VOLUME
+	.DW	SP_RESET
+	.DW	SP_VOLUME
 	.DW	SP_PERIOD
 	.DW	SP_NOTE
 	.DW	SP_PLAY
 	.DW	SP_QUERY
 	.DW	SP_DURATION
 	.DW	SP_DEVICE
+	.DW	SP_BEEP
 ;
 #IF (($ - SP_FNTBL) != (SND_FNCNT * 2))
 	.ECHO	"*** INVALID SND FUNCTION TABLE ***\n"
@@ -32,14 +51,20 @@ SP_IDAT	.EQU	0			; NO INSTANCE DATA ASSOCIATED WITH THIS DEVICE
 SP_TONECNT	.EQU	1		; COUNT NUMBER OF TONE CHANNELS
 SP_NOISECNT	.EQU	0		; COUNT NUMBER OF NOISE CHANNELS
 ;
-SP_RTCIOMSK	.EQU	00000100B
-;
 ; FOR OTHER DRIVERS, THE PERIOD VALUE FOR THE TONE IS STORED AT PENDING_PERIOD
 ; FOR THE SPK DRIVER THE ADDRESS IN THE TONE TABLE IS STORED IN PENDING_PERIOD
 ;
-SP_PENDING_PERIOD	.DW	SP_NOTE_C8	; PENDING PERIOD (16 BITS)
-SP_PENDING_VOLUME	.DB	$FF		; PENDING VOL (8 BITS)
+SP_PENDING_PERIOD	.DW	0		; PENDING PERIOD (16 BITS)
+SP_PENDING_VOLUME	.DB	0		; PENDING VOL (8 BITS)
 SP_PENDING_DURATION	.DW	0		; PENDING DURATION (16 BITS)
+SP_TBLRDY		.DB	0		; IF != 0, NOTE TABLE IS READY
+;
+	DEVECHO "SPK: IO="
+	DEVECHO SPKPORT
+	DEVECHO " MASK="
+	DEVECHO SPKMASK
+	DEVECHO "\n"
+
 ;
 ;======================================================================
 ;	DRIVER INITIALIZATION
@@ -53,10 +78,15 @@ SP_INIT:
 ;
 	CALL	NEWLINE			; ANNOUNCE DEVICE
 	PRTS("SPK: IO=0x$")
-	LD	A,RTCIO
+	LD	A,SPKPORT
 	CALL	PRTHEXBYTE
+	PRTS(" MASK=0x$")
+	LD	A,SPKMASK
+	CALL	PRTHEXBYTE
+				;
 	CALL	SP_SETTBL		; SETUP TONE TABLE
-	CALL	SP_PLAY			; PLAY DEFAULT NOTE
+	CALL	SP_RESET		; RESET PARAMETERS
+;
 	XOR	A
 	RET
 ;
@@ -64,17 +94,24 @@ SP_INIT:
 ;	SOUND DRIVER FUNCTION - RESET
 ;======================================================================
 ;
-;SP_RESET:
-;	XOR	A			; SUCCESSFULL RESET
-;	RET
+SP_RESET:
+	; RESET DEFAULTS IN CASE OF AN IN-PLACE HBIOS RESTART
+	LD	HL,0
+	LD	(SP_PENDING_PERIOD),HL	; SET TONE PERIOD TO ZERO
+	LD	(SP_PENDING_DURATION),HL; SET DURATION TO ZERO
+	XOR	A			; SIGNAL SUCCESS
+	LD	(SP_PENDING_VOLUME),A	; SET VOLUME TO ZERO
+;
+	XOR	A			; SUCCESSFULL RESET
+	RET
 ;
 ;======================================================================
 ;	SOUND DRIVER FUNCTION - VOLUME
 ;======================================================================
 ;
-;SP_VOLUME:
-;	XOR	A			; SIGNAL SUCCESS
-;	RET
+SP_VOLUME:
+	XOR	A			; SIGNAL SUCCESS
+	RET
 ;
 ;======================================================================
 ;	SOUND DRIVER FUNCTION - PERIOD
@@ -82,7 +119,6 @@ SP_INIT:
 ;
 SP_PERIOD:
 	LD	(SP_PENDING_PERIOD), HL	; SAVE AND RETURN SUCCESSFUL
-SP_STUB:
 	XOR	A
 	RET
 ;
@@ -99,7 +135,7 @@ SP_NOTE:
 	AND	00000011B		; TO THE ASSOCIATED ENTRY
 	JR	Z,SP_NOTE1		; IN THE TUNE TABLE.
 ;
-	LD	HL,$FFFF		; QUARTER NOTES
+	LD	HL,$FFFF		; EIGHTH TONES
 	JR	SP_NOTE2		; NOT SUPPORTED
 ;
 SP_NOTE1:
@@ -151,7 +187,7 @@ SP_QUERY_VOLUME:
 ;
 SP_QUERY_DEV:
 	LD	B, SNDDEV_BITMODE		; RETURN DEVICE IDENTIFIER
-	LD	DE, (RTCIO*256)+SP_RTCIOMSK	; AND ADDRESS AND DATA PORT
+	LD	DE, (SPKPORT*256)+SPKMASK	; AND ADDRESS AND DATA PORT
 	XOR	A
 	RET
 ;
@@ -160,6 +196,13 @@ SP_QUERY_DEV:
 ;======================================================================
 ;
 SP_SETTBL:
+	; IN CASE OF HBIOS RESTART IN PLACE, WE CHECK TO SEE IF THE
+	; NOT TABLE IS ALREADY INITIALIZED (READY).  IF SO, WE DON'T
+	; WANT TO DO IT AGAIN.
+	LD	A,(SP_TBLRDY)
+	OR	A
+	RET	NZ
+;
 	LD	BC,(CB_CPUMHZ)		; GET MHZ CPU SPEED (IN C).
 ;	 
 SP_SETTBL3:
@@ -198,6 +241,10 @@ SP_SETBL4:
 	INC	HL			; TO NEXT
 ;
 	DJNZ	SP_SETTBL2		; NEXT NOTE
+;
+	OR	$FF			; SIGNAL TABLE READY
+	LD	(SP_TBLRDY),A		; SAVE IT
+;
 	RET
 ;
 ;======================================================================
@@ -258,7 +305,7 @@ SP_BEEPER:
 	LD	B,$00
 	LD	IX,SPK_DLYADJ 		; The base address of the timing loop.
 	ADD	IX,BC			; Alter the length of the timing loop. Use an earlier starting point for each '1' lost by taking INT (L/4).
-	LD	A,(HB_RTCVAL)		; Fetch the present border colour from BORDCR and move it to bits 2, 1 and 0 of the A register.
+	LD	A,(SPKSHADOW)		; Fetch the present border colour from BORDCR and move it to bits 2, 1 and 0 of the A register.
 ;
 ;	The HL register holds the 'length of the timing loop' with 16 T states being used for each '1' in the L register and 1024 T states for each '1' in the H register.
 ;
@@ -277,8 +324,9 @@ BE_H_L_LP:
 ;
 ;	The loudspeaker is now alternately activated and deactivated.
 ;
-	XOR	SP_RTCIOMSK		; Flip bit 2.
-	OUT	(RTCIO),A		; Perform the 'OUT' operation, leaving other bits unchanged.
+	XOR	SPKMASK			; Flip bit.
+	OUT	(SPKPORT),A		; Perform the 'OUT' operation, leaving other bits unchanged.
+
 	LD	B,H			; Reset the B register.
 	LD	C,A			; Save the A register.
 	BIT	4,A 			; Jump if at the half-cycle point.
@@ -303,6 +351,14 @@ BE_AGAIN:
 BE_END:
 	HB_EI
 	POP	IX
+;
+;	Above flow flips the speaker bit an odd number of times which
+;	leaves the bit set to the opposite value it started at.  This
+;	ensures that the bit is properly reset to its original value.
+;
+	LD	A,(SPKSHADOW)		; Get the current port value (typically RTC latch)
+	OUT	(SPKPORT),A		; Set it
+;
 	RET				; ALWAYS EXITS WITH SUCCESS STATUS (A=0)
 ;
 ;======================================================================
@@ -323,7 +379,25 @@ SP_DEVICE:
 	LD	E,0			; E := PHYSICAL UNIT
 	LD	C,$00			; C := DEVICE TYPE
 	LD	H,0			; H := 0, DRIVER HAS NO MODES
-	LD	L,RTCIO			; L := BASE I/O ADDRESS
+	LD	L,SPKPORT		; L := BASE I/O ADDRESS
+	XOR	A
+	RET
+;
+;======================================================================
+;	SOUND DRIVER FUNCTION - BEEP
+;======================================================================
+;
+SP_BEEP:
+	LD	HL,SP_NOTE_B5			; B5 (CLOSE TO 1 KHZ)
+	LD	(SP_PENDING_PERIOD),HL
+	;LD	A,$FF
+	;LD	(SP_PENDING_VOLUME),A
+	;XOR	A
+	;LD	(SP_PENDING_DURATION),A
+;
+	CALL	SP_PLAY			; PLAY DEFAULT NOTE
+	CALL	SP_RESET		; RESET DRIVER
+;
 	XOR	A
 	RET
 ;
@@ -331,13 +405,19 @@ SP_DEVICE:
 ;
 ;	STANDARD ONE SECOND TONE TABLES AT 1MHZ.
 ;	FOR SP_BEEPER ROUTINE, FIRST WORD LOADED INTO DE, SECOND INTO HL
+;	THE PARAMETER TO SP_TONESET IS (FREQ * 100)
+;	DE: FREQUENCY IN HZ
+;	HL: T-STATES PER HALF-CYCL E / 4 AT 1 MHZ CPU SPEED
+;	    EX. MIDDLE C IS 261.63 HZ, 523.26 HALF CYCLES PER SECOND
+;               1,000,000 / 523.26 / 4 = 477
+;		OR ALTERNATIVELY 12,500,000 / 26163 = 477
 ;
 ;======================================================================
 ;
 #DEFINE	SP_TONESET(SP_FREQ) .DW SP_FREQ/100, 12500000/SP_FREQ
 ;
 SP_TUNTBL:
-	SP_TONESET(1635)		; C0
+	SP_TONESET(1635)		; C0		; DE=16, HL=7645
 	SP_TONESET(1732)		;  C
 	SP_TONESET(1835)		; D0
 	SP_TONESET(1945)		;  D
@@ -385,7 +465,7 @@ SP_TUNTBL:
 	SP_TONESET(22000)		; A3
 	SP_TONESET(23308)		;  A
 	SP_TONESET(24694)		; B3
-	SP_TONESET(26163)		; C4
+	SP_TONESET(26163)		; C4		; DE=261, HL=477
 	SP_TONESET(27718)		;  C
 	SP_TONESET(29366)		; D4
 	SP_TONESET(31113)		;  D
@@ -408,6 +488,7 @@ SP_TUNTBL:
 	SP_TONESET(83061)		;  G
 	SP_TONESET(88000)		; A5
 	SP_TONESET(93233)		;  A
+SP_NOTE_B5:
 	SP_TONESET(98777)		; B5
 	SP_TONESET(104650)		; C6
 	SP_TONESET(110873)		;  C
@@ -433,7 +514,6 @@ SP_TUNTBL:
 	SP_TONESET(352000)		; A7
 	SP_TONESET(372931)		;  A
 	SP_TONESET(395107)		; B7
-SP_NOTE_C8:
 	SP_TONESET(418601)		; C8
 	SP_TONESET(443492)		;  C
 	SP_TONESET(469863)		; D8
@@ -445,7 +525,17 @@ SP_NOTE_C8:
 	SP_TONESET(664488)		;  G
 	SP_TONESET(704000)		; A8
 	SP_TONESET(745862)		;  A
-	SP_TONESET(790213)		; B8 
+	SP_TONESET(790213)		; B8		; DE=7902, HL=15
 ;
 SP_NOTCNT	.EQU	($-SP_TUNTBL) / 4
 ;
+;--------------------------------------------------------------------------------------------------
+;   HBIOS MODULE TRAILER
+;--------------------------------------------------------------------------------------------------
+;
+END_SP	.EQU	$
+SIZ_SP	.EQU	END_SP - ORG_SP
+;	
+	MEMECHO	"SP occupies "
+	MEMECHO	SIZ_SP
+	MEMECHO	" bytes.\n"

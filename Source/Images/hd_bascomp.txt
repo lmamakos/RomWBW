@@ -1,0 +1,6 @@
+@Label="Microsoft BASIC"
+@SysImage="../ZSDOS/zsys_wbw.sys"
+#
+# Add the ReadMe document
+#
+d_bascomp/ReadMe.txt 0:

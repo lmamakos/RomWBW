@@ -1,3 +1,5 @@
+@Label="CP/M 2.2"
+@SysImage="../CPM22/cpm_wbw.sys"
 #
 # Add the ReadMe document
 #
@@ -8,6 +10,7 @@ d_cpm22/ReadMe.txt 0:
 #../../Binary/Apps/*.com 0:
 ../../Binary/Apps/assign.com 0:
 ../../Binary/Apps/cpuspd.com 0:
+../../Binary/Apps/reboot.com 0:
 ../../Binary/Apps/fat.com 0:
 ../../Binary/Apps/fdu.com 0:
 ../../Binary/Apps/fdu.doc 0:
@@ -18,6 +21,7 @@ d_cpm22/ReadMe.txt 0:
 ../../Binary/Apps/syscopy.com 0:
 ../../Binary/Apps/sysgen.com 0:
 ../../Binary/Apps/talk.com 0:
+../../Binary/Apps/htalk.com 0:
 ../../Binary/Apps/tbasic.com 0:
 ../../Binary/Apps/timer.com 0:
 ../../Binary/Apps/tune.com 0:
@@ -25,18 +29,15 @@ d_cpm22/ReadMe.txt 0:
 ../../Binary/Apps/zmp.com 0:
 ../../Binary/Apps/zmp.hlp 0:
 ../../Binary/Apps/zmp.doc 0:
+../../Binary/Apps/zmp.cfg 0:
+../../Binary/Apps/zmp.fon 0:
 ../../Binary/Apps/zmxfer.ovr 0:
 ../../Binary/Apps/zmterm.ovr 0:
 ../../Binary/Apps/zminit.ovr 0:
 ../../Binary/Apps/zmconfig.ovr 0:
 ../../Binary/Apps/zmd.com 0:
 ../../Binary/Apps/vgmplay.com 0:
-#
-# Add Tune sample files
-#
-../../Binary/Apps/Tunes/*.pt? 3:
-../../Binary/Apps/Tunes/*.mym 3:
-../../Binary/Apps/Tunes/*.vgm 3:
+../../Binary/Apps/vgminfo.com 0:
 #
 # Add OS image
 #
@@ -44,5 +45,7 @@ d_cpm22/ReadMe.txt 0:
 #
 # Add Common Applications
 #
-Common/All/*.* 0:
+Common/All/u10/*.* 0:
+Common/All/u14/*.* 0:
+Common/All/u15/*.* 0:
 Common/CPM22/*.* 0:

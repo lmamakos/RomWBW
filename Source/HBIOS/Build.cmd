@@ -17,8 +17,8 @@ set CPMDIR80=%TOOLS%/cpm/
 
 ::
 :: This PowerShell script validates the build variables passed in.  If
-:: necessary, the user is prmopted to pick the variables.  It then creates
-:: an include file that is imbedded in the HBIOS assembly (build.inc).
+:: necessary, the user is prompted to pick the variables.  It then creates
+:: an include file that is embedded in the HBIOS assembly (build.inc).
 :: It also creates a batch command file that sets environment variables
 :: for use by the remainder of this batch file (build_env.cmd).
 ::
@@ -34,26 +34,41 @@ PowerShell -ExecutionPolicy Unrestricted .\Build.ps1 %* || exit /b
 call build_env.cmd
 
 ::
+:: Start of the actual build process for a given ROM.
+::
+
+echo.
+echo ============================================================
+echo %ROMName% for Z%CPUType% CPU
+echo ============================================================
+echo.
+
+::
 :: Create a small app that is used to export key build variables of the build.
 :: Then run the app to output a file with the variables.  Finally, read the
 :: file into variables usable in this batch file.
 ::
 
 tasm -t80 -g3 -dCMD hbios_env.asm hbios_env.com hbios_env.lst || exit /b
+zxcc hbios_env
 zxcc hbios_env >hbios_env.cmd
 call hbios_env.cmd
-
-::
-:: Start of the actual build process for a given ROM.
-::
-
-echo Building %ROMSize%K ROM %ROMName% for Z%CPUType% CPU...
 
 ::
 :: UNA is a special case, check for it and jump if needed.
 ::
 
 if %Platform%==UNA goto :UNA
+
+::
+:: Determine proper variant of the NetBoot module to embed
+::
+
+if %Platform%==DUO (
+    set NetBoot=netboot-duo.mod
+) else (
+    set NetBoot=netboot-mt.mod
+)
 
 ::
 :: Bring the previously build font files into this directory
@@ -67,7 +82,7 @@ copy ..\Fonts\font*.asm . || exit /b
 
 tasm -t%CPUType% -g3 -dROMBOOT hbios.asm hbios_rom.bin hbios_rom.lst || exit /b
 tasm -t%CPUType% -g3 -dAPPBOOT hbios.asm hbios_app.bin hbios_app.lst || exit /b
-tasm -t%CPUType% -g3 -dIMGBOOT hbios.asm hbios_img.bin hbios_img.lst || exit /b
+::tasm -t%CPUType% -g3 -dIMGBOOT hbios.asm hbios_img.bin hbios_img.lst || exit /b
 
 ::
 :: Build ROM Components
@@ -76,37 +91,54 @@ tasm -t%CPUType% -g3 -dIMGBOOT hbios.asm hbios_img.bin hbios_img.lst || exit /b
 call :asm dbgmon || exit /b
 call :asm romldr || exit /b
 
+call :asm invntdev || exit /b
+call :asm invntslc || exit /b
 call :asm eastaegg || exit /b
 call :asm nascom || exit /b
 :: call :asm tastybasic || exit /b
 call :asm game || exit /b
 call :asm usrrom || exit /b
 call :asm updater || exit /b
-call :asm imgpad2 || exit /b
+call :asm romfonts || exit /b
+
+:: Sysconf builds as both BIN and COM files
+
+tasm -t%CPUType% -g3 -fFF -dROMWBW sysconf.asm sysconf.bin sysconf_bin.lst || exit /b
+tasm -t%CPUType% -g3 -fFF -dCPM sysconf.asm sysconf.com sysconf_com.lst || exit /b
+
+:: Create platform specific hardware monitor
+
+if %Platform%==SZ180 (
+    zxcc slr180 -sz180mon/fh || exit /b
+    zxcc mload25 -sz180mon || exit /b
+    set HwMon=sz180mon.com
+) else (
+    call :asm hwmon || exit /b
+    set HwMon=hwmon.bin
+)
 
 ::
 :: Create additional ROM bank images by assembling components into
 :: 32K chunks which can be concatenated later.  Note that
-:: osimg_small is a special case because it is 20K in size.  This
+:: appboot is a special case because it is 20K in size.  This
 :: image is subsequently used to generate the .com loadable file.
 ::
 
-copy /b romldr.bin + dbgmon.bin + ..\zsdos\zsys_wbw.bin + ..\cpm22\cpm_wbw.bin osimg.bin || exit /b
-copy /b ..\Forth\camel80.bin + nascom.bin + ..\tastybasic\src\tastybasic.bin + game.bin + eastaegg.bin + netboot.mod + updater.bin + usrrom.bin osimg1.bin || exit /b
-copy /b imgpad2.bin osimg2.bin || exit /b
-
-copy /b romldr.bin + dbgmon.bin + ..\zsdos\zsys_wbw.bin osimg_small.bin || exit /b
+copy /b romldr.bin + dbgmon.bin + ..\zsdos\zsys_wbw.bin + ..\cpm22\cpm_wbw.bin rom1.bin || exit /b
+copy /b ..\Forth\camel80.bin + nascom.bin + ..\tastybasic\src\tastybasic.bin + game.bin + eastaegg.bin + %NETBOOT% + updater.bin + sysconf.bin + usrrom.bin rom2.bin || exit /b
+copy /b %HwMon% + invntdev.bin + invntslc.bin + romfonts.bin rom3.bin
+copy /b romldr.bin + dbgmon.bin + ..\zsdos\zsys_wbw.bin appboot.bin || exit /b
 
 ::
 :: Inject one byte checksum at the last byte of all 4 ROM bank image files.
-:: This means that computing a checksum over any of the 32K osimg banks
-:: should yield a result of zero.
+:: This means that computing a checksum over any of the 32K rom banks
+:: should yield a result of zero.  Any bank image file that is not
+:: 32K will be automatically normalized to 32K by the srec_cat
+:: formula (extended or truncated)!!!
 ::
 
-if %ROMSize% gtr 0 (
-    for %%f in (hbios_rom.bin osimg.bin osimg1.bin osimg2.bin) do (
-      "%TOOLS%\srecord\srec_cat.exe" %%f -Binary -Crop 0 0x7FFF -Checksum_Negative_Big_Endian 0x7FFF 1 1 -o %%f -Binary || exit /b
-    )
+for %%f in (hbios_rom.bin rom1.bin rom2.bin rom3.bin) do (
+  "%TOOLS%\srecord\srec_cat.exe" %%f -Binary -Crop 0 0x7FFF -Checksum_Negative_Big_Endian 0x7FFF 1 1 -o %%f -Binary || exit /b
 )
 
 ::
@@ -126,13 +158,13 @@ if %ROMSize% gtr 0 (
 ::
 
 if %ROMSize% gtr 0 (
-    copy /b hbios_rom.bin + osimg.bin + osimg1.bin + osimg2.bin + ..\RomDsk\rom%ROMSize%_wbw.dat %ROMName%.rom || exit /b
-    copy /b hbios_rom.bin + osimg.bin + osimg1.bin + osimg2.bin %ROMName%.upd || exit /b
-    copy /b hbios_app.bin + osimg_small.bin %ROMName%.com || exit /b
+    copy /b hbios_rom.bin + rom1.bin + rom2.bin + rom3.bin + ..\RomDsk\rom%ROMDiskSize%_wbw.dat %ROMName%.rom || exit /b
+    copy /b hbios_rom.bin + rom1.bin + rom2.bin + rom3.bin %ROMName%.upd || exit /b
+    copy /b hbios_app.bin + appboot.bin %ROMName%.com || exit /b
 ) else (
-    copy /b hbios_rom.bin + osimg_small.bin %ROMName%.rom || exit /b
-    copy /b hbios_rom.bin + osimg_small.bin %ROMName%.upd || exit /b
-    copy /b hbios_app.bin + osimg_small.bin %ROMName%.com || exit /b
+    copy /b hbios_rom.bin + rom1.bin + rom2.bin + rom3.bin  + ..\RomDsk\rom%RAMDiskSize%_wbw.dat %ROMName%.rom || exit /b
+    copy /b hbios_rom.bin + rom1.bin + rom2.bin + rom3.bin %ROMName%.upd || exit /b
+    copy /b hbios_app.bin + appboot.bin %ROMName%.com || exit /b
 )
 
 ::
@@ -142,6 +174,8 @@ if %ROMSize% gtr 0 (
 if exist %ROMName%.rom copy %ROMName%.rom ..\..\Binary || exit /b
 if exist %ROMName%.upd copy %ROMName%.upd ..\..\Binary || exit /b
 if exist %ROMName%.com copy %ROMName%.com ..\..\Binary || exit /b
+
+if exist sysconf.com copy sysconf.com ..\..\Binary\Apps\ || exit /b
 
 goto :eof
 
@@ -161,14 +195,14 @@ call :asm dbgmon || exit /b
 call :asm romldr || exit /b
 
 :: Create the OS bank
-copy /b romldr.bin + dbgmon.bin + ..\zsdos\zsys_una.bin + ..\cpm22\cpm_una.bin osimg.bin || exit /b
+copy /b romldr.bin + dbgmon.bin + ..\zsdos\zsys_una.bin + ..\cpm22\cpm_una.bin rom2.bin || exit /b
 
 :: Copy OS Bank and ROM Disk image files to output
-copy /b osimg.bin ..\..\Binary\UNA_WBW_SYS.bin || exit /b
-copy /b ..\RomDsk\rom%ROMSize%_una.dat ..\..\Binary\UNA_WBW_ROM%ROMSize%.bin || exit /b
+copy /b rom2.bin ..\..\Binary\UNA_WBW_SYS.bin || exit /b
+copy /b ..\RomDsk\rom%ROMDiskSize%_una.dat ..\..\Binary\UNA_WBW_ROM%ROMDiskSize%.bin || exit /b
 
 :: Create the final ROM image
-copy /b ..\UBIOS\UNA-BIOS.BIN + osimg.bin + ..\UBIOS\FSFAT.BIN + ..\RomDsk\rom%ROMSize%_una.dat %ROMName%.rom || exit /b
+copy /b ..\UBIOS\UNA-BIOS.BIN + rom2.bin + ..\UBIOS\FSFAT.BIN + ..\RomDsk\rom%ROMDiskSize%_una.dat %ROMName%.rom || exit /b
 
 :: Copy to output
 copy %ROMName%.rom ..\..\Binary || exit /b
@@ -194,34 +228,51 @@ goto :eof
 :dist
 
 call Build SBC std || exit /b
-call Build SBC simh || exit /b
+call Build SBC simh_std || exit /b
 call Build MBC std || exit /b
 call Build ZETA std || exit /b
 call Build ZETA2 std || exit /b
 call Build N8 std || exit /b
+call Build N8PC std || exit /b
 call Build MK4 std || exit /b
+call Build RC2014 std || exit /b
+call Build RCEZ80 std || exit /b
 call Build RCZ80 std || exit /b
-call Build RCZ80 kio || exit /b
-call Build RCZ80 easy || exit /b
-call Build RCZ80 tiny || exit /b
-call Build RCZ80 skz || exit /b
-:: call Build RCZ80 mt || exit /b
-:: call Build RCZ80 duart || exit /b
-call Build RCZ80 zrc || exit /b
-call Build RCZ80 zrc_ram || exit /b
-call Build RCZ180 ext || exit /b
-call Build RCZ180 nat || exit /b
-call Build RCZ280 ext || exit /b
-call Build RCZ280 nat || exit /b
-call Build RCZ280 zz80mb || exit /b
-call Build RCZ280 zzrc || exit /b
-call Build SCZ180 sc126 || exit /b
-call Build SCZ180 sc130 || exit /b
-call Build SCZ180 sc131 || exit /b
-call Build SCZ180 sc140 || exit /b
-call Build SCZ180 sc503 || exit /b
+call Build RCZ80 kio_std || exit /b
+call Build EZZ80 easy_std || exit /b
+call Build EZZ80 tiny_std || exit /b
+call Build RCZ80 skz_std || exit /b
+call Build RCZ80 zrc_std || exit /b
+call Build RCZ80 zrc512_std || exit /b
+call Build RCZ80 ez512_std || exit /b
+call Build RCZ80 k80w_std || exit /b
+call Build RCZ180 ext_std || exit /b
+call Build RCZ180 nat_std || exit /b
+call Build RCZ180 z1rcc_std || exit /b
+call Build RCZ280 ext_std || exit /b
+call Build RCZ280 nat_std || exit /b
+call Build RCZ280 zz80mb_std || exit /b
+call Build RCZ280 zzrcc_std || exit /b
+call Build SCZ180 sc126_std || exit /b
+call Build SCZ180 sc130_std || exit /b
+call Build SCZ180 sc131_std || exit /b
+call Build SCZ180 sc140_std || exit /b
+call Build SCZ180 sc503_std || exit /b
+call Build SCZ180 sc700_std || exit /b
+call Build GMZ180 std || exit /b
 call Build DYNO std || exit /b
-call Build UNA std || exit /b
 call Build RPH std || exit /b
+call Build Z80RETRO std || exit /b
+call Build SZ180 std || exit /b
+call Build DUO std || exit /b
+call Build HEATH std || exit /b
+call Build EPITX std || exit /b
+:: call Build MON std || exit /b
+call Build NABU std || exit /b
+call Build SZ80 std || exit /b
+call Build SZ80 t35_std || exit /b
+call Build UNA std || exit /b
+call Build MSX std || exit /b
+call Build MECB std || exit /b
 
 goto :eof

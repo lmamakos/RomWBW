@@ -1,42 +1,71 @@
 #
 # this makefile subsumes all the work done in Build.cmd, BuildDisk.cmd, BuildDisk.ps1
 #
-SYSTEMS = ../CPM22/cpm_wbw.sys ../ZSDOS/zsys_wbw.sys ../CPM3/cpmldr.sys ../ZPM3/zpmldr.sys
+SYSTEMS = ../CPM22/cpm_wbw.sys ../ZSDOS/zsys_wbw.sys ../QPM/qpm_wbw.sys ../CPM3/cpmldr.sys ../ZPM3/zpmldr.sys
 
-FDIMGS = fd144_cpm22.img fd144_zsdos.img fd144_nzcom.img \
-	fd144_cpm3.img fd144_zpm3.img fd144_ws4.img fd144_qpm.img
-HD512IMGS = hd512_cpm22.img hd512_zsdos.img hd512_nzcom.img \
-	hd512_cpm3.img hd512_zpm3.img hd512_ws4.img
-# HDIMGS += hd512_bp.img
-HD1KIMGS = hd1k_cpm22.img hd1k_zsdos.img hd1k_nzcom.img \
-	hd1k_cpm3.img hd1k_zpm3.img hd1k_ws4.img
-# HD1KIMGS += hd1k_bp.img
+# OBJECTS =
 
 HD512PREFIX =
 HD1KPREFIX = hd1k_prefix.dat
 
-OBJECTS = $(FDIMGS)
-OBJECTS += $(HD512IMGS) hd512_combo.img  hd512_dos65.img hd512_qpm.img$(HD512PREFIX)
-OBJECTS += $(HD1KIMGS) hd1k_combo.img hd1k_qpm.img $(HD1KPREFIX)
+# add base images used in *.def files
 
-OTHERS = blank144 blankhd512 blankhd1k
+FDIMGS = $(wildcard fd_*.txt)
+FDIMGS := $(subst fd_,,$(FDIMGS))
+FDIMGS := $(addprefix fd144_,$(FDIMGS))
+FDIMGS := $(FDIMGS:.txt=.img)
+
+# $(info FDIMGS: $(FDIMGS))
+
+HDIMGS = $(wildcard hd_*.txt)
+HDIMGS := $(subst hd_,,$(HDIMGS))
+HDIMGS := $(addprefix hd512_,$(HDIMGS)) $(addprefix hd1k_,$(HDIMGS))
+HDIMGS := $(HDIMGS:.txt=.img)
+
+# $(info HDIMGS: $(HDIMGS))
+
+BASEIMGS = $(shell grep -vEh "^\#" *.def)
+BASEIMGS := $(addprefix hd512_,$(BASEIMGS)) $(addprefix hd1k_,$(BASEIMGS))
+BASEIMGS := $(addsuffix .img,$(BASEIMGS))
+
+# $(info BASEIMGS: $(BASEIMGS))
+
+DSKIMGS = $(wildcard *.def)
+DSKIMGS := $(addprefix hd512_,$(DSKIMGS)) $(addprefix hd1k_,$(DSKIMGS))
+DSKIMGS := $(DSKIMGS:.def=.img)
+
+# $(info DSKIMGS: $(DSKIMGS))
+
+OBJECTS = $(FDIMGS) $(HDIMGS) $(BASEIMGS) $(DSKIMGS) $(HD512PREFIX) $(HD1KPREFIX)
+
+OTHERS = blank144 blankhd512 blankhd1k *.cat
 
 NODELETE = $(HD512PREFIX) $(HD1KPREFIX)
 
 DEST=../../Binary
 
 TOOLS = ../../Tools
+
+
+# $(info OBJECTS: $(OBJECTS))
+
 include $(TOOLS)/Makefile.inc
 
 .SHELLFLAGS = -ce
 
 DIFFPATH = $(DIFFTO)/Binary
 
-hd512_combo.img: $(HD512PREFIX) $(HD512IMGS)
-	cat $^ > $@
+hd512_%.img: %.def
+	@echo "Generating hd512 disk image ""$@"" using $^"; \
+	files=`grep -vEh "^\s*\#" $^ | grep -vEh "^\s*$$" | tr -d '\r' | awk '{print "hd512_" $$0 ".img"}'`; \
+	echo "   " $${files}; \
+	cat $(HD512PREFIX) $${files} > $@
 
-hd1k_combo.img: $(HD1KPREFIX) $(HD1KIMGS)
-	cat $^ > $@
+hd1k_%.img: %.def
+	@echo "Generating hd1k disk image ""$@"" using $^"; \
+	files=`grep -vEh "^\s*\#" $^ | grep -vEh "^\s*$$" | tr -d '\r' | awk '{print "hd1k_" $$0 ".img"}'`; \
+	echo "   " $${files}; \
+	cat $(HD1KPREFIX) $${files} > $@
 
 #
 # this somewhat impenetrable and fragile code is used to build each of the images
@@ -61,22 +90,14 @@ blankhd512:
 	@echo Making Blank HD512 of size $(HD512SIZE)k
 	@LC_ALL=en_US.US-ASCII tr '\000' '\345' </dev/zero | dd of=$@ bs=1024 count=$(HD512SIZE)
 	@hexdump $@
-	
+
 blankhd1k:
 	@echo Making Blank HD1K of size $(HD1KSIZE)k
 	@LC_ALL=en_US.US-ASCII tr '\000' '\345' </dev/zero | dd of=$@ bs=1024 count=$(HD1KSIZE)
 	@hexdump $@
 
-%.img: $(SYSTEMS) blank144 blankhd512 blankhd1k Makefile
-	@sys= ; \
-	case $@ in \
-		(*cpm22*) sys=../CPM22/cpm_wbw.sys;; \
-		(*qpm*) sys=d_qpm/u0/qpm.sys;; \
-		(*zsdos* | *nzcom* | *dos65*) sys=../ZSDOS/zsys_wbw.sys;; \
-		(*cpm3*) sys=../CPM3/cpmldr.sys;; \
-		(*zpm3*) sys=../ZPM3/zpmldr.sys;; \
-	esac ; \
-	if echo $@ | grep -q ^fd144_ ; then \
+%.img: $(SYSTEMS) blank144 blankhd512 blankhd1k # Makefile
+	@if echo $@ | grep -q ^fd144_ ; then \
 		fmt=wbw_fd144 ; dtype=fd ; type=fd144_ ; proto=blank144 ; \
 	fi ; \
 	if echo $@ | grep -q ^hd512_ ; then \
@@ -88,9 +109,22 @@ blankhd1k:
 	d=$$(echo $(basename $@) | sed s/$$type//) ; \
 	echo Generating $@ ; \
 	cp $$proto $@ ; \
-	if [ "$$sys" ] ; then \
-		echo copying system $$sys to $@ ; \
-		$(BINDIR)/mkfs.cpm -f $$fmt -b $$sys $@ ; \
+	if [ -f $${dtype}_$$d.txt ] ; then \
+		output=` \
+			grep "^\s*@" $${dtype}_$$d.txt | tr -d '\r' | while read directive ; do \
+				echo $${directive#?} ; \
+			done ` ; \
+		eval "$$output" ; \
+	fi ; \
+	if [ "$$SysImage" ] ; then \
+		echo copying system $$SysImage to $@ ; \
+		$(BINDIR)/mkfs.cpm -f $$fmt -b $$SysImage $@ ; \
+	fi ; \
+	if [ "$$Label" ] ; then \
+		Label=`echo "$$Label" | awk '{ print substr($$0, 1, 16) }'` ; \
+		echo "Label: \"$$Label\"" ; \
+		echo "\$$\$$\$$\$$\$$\$$\$$\$$\$$\$$\$$\$$\$$\$$\$$\$$\$$" | tr -d '\n' | dd conv=notrunc status=none bs=1 seek=1511 of=$@ ; \
+		echo "$$Label" | tr -d '\n' | dd conv=notrunc status=none bs=1 seek=1511 of=$@; \
 	fi ; \
 	for u in $$(seq 0 15) ; do \
 		dir=d_$$d/u$$u ; \
@@ -103,26 +137,26 @@ blankhd1k:
 			done ; \
 		fi ; \
 	done ; \
-	echo $${dtype}_$$d.txt ; \
 	if [ -f $${dtype}_$$d.txt ] ; then \
 		echo " " copying files from $${dtype}_$$d.txt ; \
-		grep -v ^# $${dtype}_$$d.txt | tr -d '\r' | while read file user ; do \
-			rf=$$($(CASEFN) $$file | sort -V) ; \
+		grep -v "^\s*[#@]" $${dtype}_$$d.txt | tr -d '\r' | while read file user ; do \
+			rf=$$($(CASEFN) $$file | sort -f) ; \
 			echo "    " $$rf ; \
 			if [ -z "$$rf" ] ; then \
 				echo " " $$file missing ; \
+				exit 1 ; \
 			else \
 				$(CPMCP) -f $$fmt $@ $$rf $$user ; \
 			fi ; \
 		done ; \
 	fi ; \
-
+	$(CPMLS) -f $$fmt -D $@ > $(@:.img=.cat)
 
 clean::
 	@rm -f *.ls
 
 imgdiff:
-	@for i in $(FDIMGS) $(HD512IMGS) $(HD1KIMGS) ; do \
+	@for i in $(FDIMGS) $(HD512IMGS) $(HD512XIMGS) $(HD1KIMGS) $(HD1KXIMGS) ; do \
 		echo $$i ; \
 		if echo $$i | grep -q ^fd144_ ; then \
 			fmt=wbw_fd144 ; \

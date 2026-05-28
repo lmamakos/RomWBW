@@ -1,0 +1,6 @@
+@Label="SLR Z80ASM"
+@SysImage="../ZSDOS/zsys_wbw.sys"
+#
+# Add the ReadMe document
+#
+d_z80asm/ReadMe.txt 0:

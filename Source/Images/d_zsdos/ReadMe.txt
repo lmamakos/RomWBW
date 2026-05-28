@@ -15,7 +15,7 @@ ZSDOS is a replacement for the BDOS portion of the CP/M 2.2 operating
 system.  Since it does not include it's own command processor, the
 the ZCPR D&J Command Processor has been included.
 
-The primary documentation for ZSDOS and ZCPR 1 are contained in the Doc
+The primary documentation for ZSDOS and ZCPR 1 are contained in the Doc/CPM
 directory of the RomWBW distribution.  The specific files are "ZSDOS
 Manual.pdf", "ZCPR Manual.pdf", and "ZCPR-DJ.doc".  This document is a
 supplement to the primary documentation.
@@ -40,16 +40,16 @@ more information.  I have chosen to use ZSDOS to pick up the maximum
 number of features. Date stamping is still available, but must be
 loaded as an RSX.
 
-The source allows you to compile the OS code as either v1.1 or v1.2 via 
-an equate. Version 1.2 was never distributed and contains only a few 
-minor fixes.  Unfortunately, the use of v1.2 would make it incompatible 
-with many support modules and overlays due to their reliance on 
-hard-coded address assumptions.  This is probably why it was never 
-distributed.  I encountered this myself with the date stamping code –- 
-it won't work with v1.2 because it does a version check. For now, I have 
-chosen to use v1.1 to maximize compatibility (seems to be what everyone 
-is doing). Ultimately, I may go back and try to rebuild everything in 
-the distribution to bring it all up to v1.2. That is for the future 
+The source allows you to compile the OS code as either v1.1 or v1.2 via
+an equate. Version 1.2 was never distributed and contains only a few
+minor fixes.  Unfortunately, the use of v1.2 would make it incompatible
+with many support modules and overlays due to their reliance on
+hard-coded address assumptions.  This is probably why it was never
+distributed.  I encountered this myself with the date stamping code --
+it won't work with v1.2 because it does a version check. For now, I have
+chosen to use v1.1 to maximize compatibility (seems to be what everyone
+is doing). Ultimately, I may go back and try to rebuild everything in
+the distribution to bring it all up to v1.2. That is for the future
 though.
 
 == Usage ==
@@ -141,7 +141,7 @@ distribution as possible.
 == ZSDOS 1.1 Files ==
 
 The following files came from the official ZSDOS distribution.  These
-are generally documented in the "ZSDOS Manual.pdf" document in the Doc
+are generally documented in the "ZSDOS Manual.pdf" document in the Doc/CPM
 directory of the RomWBW distribution.  Note that some of the files
 included in the ZSDOS distribution are not listed below because they
 have been superseded by more recent versions listed in other sections
@@ -192,7 +192,7 @@ The following files have been included from CP/M 2.2.  These files
 provide various functionality that is not really available from the
 ZSDOS applications themselves.  For example, the CP/M 2.2 application
 called STAT is useful for modifying the IOBYTE.  Most of these
-applications are documented in the "CPM Manual.pdf" document in the Doc
+applications are documented in the "CPM Manual.pdf" document in the Doc/CPM
 directory of the RomWBW distribution.
 
 ASM.COM - DRI 8080 assembler producing Intel hex files
@@ -229,6 +229,8 @@ XM.COM - XModem file transfer application
 ZMP.COM - ZModem communications program (requires dedicated comm port)
 ZMP.DOC - Documentation for ZMP
 ZMP.HLP - Help file for ZMP
+ZMP.CFG - Configuration file for ZMP
+ZMP.FON - Phone book for ZMP
 ZMXFER.OVR - Overlay file for ZMP
 ZMTERM.OVR - Overlay file for ZMP
 ZMINIT.OVR - Overlay file for ZMP
@@ -275,6 +277,11 @@ LBREXT.COM - Extract file from .LBR libraries
 LBREXT36.CFG - ZCNFG configuration file for LBREXT
 ZXD.COM - Enhanced directory lister w/ date/time stamp support
 ZXD.CFG - ZCNFG configuration file for ZXD
+BBCBASIC.COM - BBC BASIC CP/M Version by R.T.Russell
+BBCBASIC.TXT - Help file for BBC BASIC
+GENHEX.COM - Generates an Intel Hex file from the input file
+LS.COM - An alternative file listing to DIR
+LSWEEP.COM - Can extract and view member files of an .LBR archive
 
 == Testing Applications (User Area 2) ==
 

@@ -1,0 +1,6 @@
+@Label="Aztec C"
+@SysImage="../ZSDOS/zsys_wbw.sys"
+#
+# Add the ReadMe document
+#
+d_aztecc/ReadMe.txt 0:

@@ -1,6 +1,10 @@
 #
 # build the tools for linux and Darwin
 #
+
+.ONESHELL:
+.SHELLFLAGS = -ce
+
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
 	SUFFIX=linux
@@ -9,7 +13,7 @@ ifeq ($(UNAME), Darwin)
 	SUFFIX=osx
 endif
 
-SUBDIRS = bst uz80as zxcc cpmtools bin2asm lzsa
+SUBDIRS = OpenSpin uz80as zxcc cpmtools bin2asm lzsa compress
 
 all:
 	@chmod +x casefn.sh

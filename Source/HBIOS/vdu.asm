@@ -45,6 +45,7 @@ VDU_CSTY	.EQU	VDU_BLOK	; DEFAULT CURSOR STYLE
 VDU_BLNK	.EQU	VDU_NOBL	; DEFAULT BLINK RATE
 ;
 TERMENABLE	.SET	TRUE		; INCLUDE TERMINAL PSEUDODEVICE DRIVER
+PPKENABLE	.SET	TRUE		; INCLUDE PPK KEYBOARD SUPPORT
 ;
 #IF (VDUSIZ=V80X24)
 DLINES		.EQU	24
@@ -82,6 +83,29 @@ VDU_R10		.EQU	(VDU_BLNK + DSCANL-1)
 VDU_R11		.EQU	DSCANL-1
 #ENDIF
 ;
+		DEVECHO	"VDU: IO="
+		DEVECHO	VDU_RAMRD
+		DEVECHO	", PPK IO="
+		DEVECHO	VDU_PPIA
+		DEVECHO	"\n"
+;
+;--------------------------------------------------------------------------------------------------
+;   HBIOS MODULE HEADER
+;--------------------------------------------------------------------------------------------------
+;
+ORG_VDU	.EQU	$
+;
+	.DW	SIZ_VDU		; MODULE SIZE
+	.DW	VDU_INITPHASE		; ADR OF INIT PHASE HANDLER
+;
+VDU_INITPHASE:
+	; INIT PHASE HANDLER, A=PHASE
+	;CP	HB_PHASE_PREINIT	; PREINIT PHASE?
+	;JP	Z,VDU_PREINIT		; DO PREINIT
+	CP	HB_PHASE_INIT		; INIT PHASE?
+	JP	Z,VDU_INIT		; DO INIT
+	RET				; DONE
+;
 ;======================================================================
 ; VDU DRIVER - INITIALIZATION
 ;======================================================================
@@ -111,7 +135,7 @@ VDU_INIT:
 ;
 VDU_INIT1:
 	CALL 	VDU_CRTINIT		; INIT SY6845 VDU CHIP
-	CALL	VDU_VDARES
+	CALL	VDU_VDAINI
 	CALL	PPK_INIT		; INITIALIZE KEYBOARD DRIVER
 ;
 	; ADD OURSELVES TO VDA DISPATCH TABLE
@@ -158,6 +182,12 @@ VDU_VDAINI:
 	; RESET VDA
 	; CURRENTLY IGNORES VIDEO MODE AND BITMAP DATA
 	CALL	VDU_VDARES		; RESET VDA
+	LD	DE,0
+	LD	(VDU_OFFSET),DE
+	CALL	VDU_XY
+	LD	A,' '
+	LD	DE,1024*16
+	CALL	VDU_FILL
 	XOR	A			; SIGNAL SUCCESS
 	RET
 
@@ -169,13 +199,6 @@ VDU_VDAQRY:
 	RET
 
 VDU_VDARES:
-	LD	DE,0
-	LD	(VDU_OFFSET),DE
-	CALL	VDU_XY
-	LD	A,' '
-	LD	DE,1024*16
-	CALL	VDU_FILL
-
 	XOR	A
 	RET
 
@@ -732,3 +755,14 @@ VDU_IDAT:
 	.DB	VDU_PPIB
 	.DB	VDU_PPIC
 	.DB	VDU_PPIX
+;
+;--------------------------------------------------------------------------------------------------
+;   HBIOS MODULE TRAILER
+;--------------------------------------------------------------------------------------------------
+;
+END_VDU	.EQU	$
+SIZ_VDU	.EQU	END_VDU - ORG_VDU
+;	
+	MEMECHO	"VDU occupies "
+	MEMECHO	SIZ_VDU
+	MEMECHO	" bytes.\n"

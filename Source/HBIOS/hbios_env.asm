@@ -24,8 +24,11 @@
 ;
 ; Print all desired config values...
 ;
-	prtval("ROMSIZE$", ROMSIZE)
 	prtval("CPUFAM$", CPUFAM)
+	prtval("ROMSIZE$", ROMSIZE)
+	prtval("RAMSIZE$", RAMSIZE)
+	prtval("ROMDISKSIZE$", ROMD_BNKS * 32)
+	prtval("RAMDISKSIZE$", RAMD_BNKS * 32)
 ;
 	ret
 ;

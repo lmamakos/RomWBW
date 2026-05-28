@@ -22,6 +22,24 @@ YMDAT		.EQU	VGMBASE+01H		; Primary YM2162 11000001 a1=0 a0=1
 YM2SEL		.EQU	VGMBASE+02H		; Secondary YM2162 11000010 a1=1 a0=0
 YM2DAT		.EQU	VGMBASE+03H		; Secondary YM2162 11000011 a1=1 a0=1
 
+;
+;--------------------------------------------------------------------------------------------------
+;   HBIOS MODULE HEADER
+;--------------------------------------------------------------------------------------------------
+;
+ORG_YM	.EQU	$
+;
+	.DW	SIZ_YM			; MODULE SIZE
+	.DW	YM_INITPHASE		; ADR OF INIT PHASE HANDLER
+;
+YM_INITPHASE:
+	; INIT PHASE HANDLER, A=PHASE
+	;CP	HB_PHASE_PREINIT	; PREINIT PHASE?
+	;JP	Z,YM2612_PREINIT	; DO PREINIT
+	CP	HB_PHASE_INIT		; INIT PHASE?
+	JP	Z,YM2612_INIT		; DO INIT
+	RET				; DONE
+
 ;------------------------------------------------------------------------------
 ; Device capabilities and configuration
 ;------------------------------------------------------------------------------
@@ -39,6 +57,10 @@ YM_DEBUG		.EQU	0	; CHANGE TO 1 TO ENABLE DEBUGGING
 YM_RSTCFG		.EQU	0	; SET TO 1 FOR FULL REGISTER CLEAR
 YM_FAST3438		.EQU	0	; FAST CPU'S WITH A YM3438 MAY REQUIRE A DELAY
 ;
+		DEVECHO	"YM: IO="
+		DEVECHO	YMSEL
+		DEVECHO	"\n"
+;
 ;------------------------------------------------------------------------------
 ; Driver function table and instance data
 ;------------------------------------------------------------------------------
@@ -51,6 +73,7 @@ YM_FNTBL:	.DW	YM_RESET
 		.DW	YM_QUERY
 		.DW	YM_DURATION
 		.DW	YM_DEVICE
+		.DW	YM_BEEP
 ;
 #IF (($ - YM_FNTBL) != (SND_FNCNT * 2))
 	.ECHO	"*** INVALID SND FUNCTION TABLE ***\n"
@@ -193,6 +216,13 @@ YM_DEVICE:	LD	D,SNDDEV_YM2612		; D := DEVICE TYPE
 		RET
 ;
 ;------------------------------------------------------------------------------
+; Sound driver function - BEEP
+;------------------------------------------------------------------------------
+;
+YM_BEEP:
+	JP	SND_BEEP		; DEFER TO GENERIC CODE IN HBIOS
+;
+;------------------------------------------------------------------------------
 ; Sound driver function - RESET
 ; Initialize device. Set volume off. Reset volume and tone variables.
 ;------------------------------------------------------------------------------
@@ -233,11 +263,11 @@ YM_NOTE:	;CALL	PRTHEXWORDHL
 		LD	DE,40			; Calculate the ym2612 block (octave)
 		ADD	HL,DE			; This will go into b13-b11
 		LD	DE,48			; HL / DE
-		CALL	DIV16			; BC = block (octave) HL = quarter semitone note
+		CALL	DIV16			; BC = block (octave) HL = quarter semitone
 ;				
 		ADD	HL,HL
 		LD	DE,ym_notetable		; point HL to frequency entry
-		ADD	HL,DE			; for the quarter semitone note
+		ADD	HL,DE			; for the quarter semitone
 
 		;CALL	PRTHEXWORDHL
 		;CALL	PC_COLON
@@ -878,3 +908,14 @@ ym_cfg:		.db	part0, 24/2
 ;
 		.db	$00			; End flag
 #ENDIF
+;
+;--------------------------------------------------------------------------------------------------
+;   HBIOS MODULE TRAILER
+;--------------------------------------------------------------------------------------------------
+;
+END_YM	.EQU	$
+SIZ_YM	.EQU	END_YM - ORG_YM
+;	
+	MEMECHO	"YM occupies "
+	MEMECHO	SIZ_YM
+	MEMECHO	" bytes.\n"

@@ -26,6 +26,27 @@ KIO_KIOCMDB	.EQU	KIOBASE + $0F
 ;
 ;
 ;
+	DEVECHO	"KIO: IO="
+	DEVECHO	KIOBASE
+	DEVECHO	"\n"
+;
+;--------------------------------------------------------------------------------------------------
+;   HBIOS MODULE HEADER
+;--------------------------------------------------------------------------------------------------
+;
+ORG_KIO	.EQU	$
+;
+	.DW	SIZ_KIO			; MODULE SIZE
+	.DW	KIO_INITPHASE		; ADR OF INIT PHASE HANDLER
+;
+KIO_INITPHASE:
+	; INIT PHASE HANDLER, A=PHASE
+	CP	HB_PHASE_PREINIT	; PREINIT PHASE?
+	JP	Z,KIO_PREINIT		; DO PREINIT
+	CP	HB_PHASE_INIT		; INIT PHASE?
+	JP	Z,KIO_INIT		; DO INIT
+	RET				; DONE
+;
 KIO_PREINIT:
 	CALL	KIO_DETECT
 	RET	NZ
@@ -33,9 +54,15 @@ KIO_PREINIT:
 	; RECORD PRESENCE
 	LD	A,$FF
 	LD	(KIO_EXISTS),A
+;
 	; INITIALIZE KIO
-	LD	A,%11111001	; RESET ALL DEVICES, SET DAISYCHAIN
-	OUT	(KIO_KIOCMD),A	; DO IT
+	;   HCS: initialize KIO if NOT EZ512	
+	;   HCS: do not write to KIO command register, if EZ512
+	;   HCS: because it is already done in monitor and will upset the bank register	
+#IF (MEMMGR != MM_EZ512)		; Z80 PIO ON EAZY80-512
+	LD	A,%11111001		; RESET ALL DEVICES, SET DAISYCHAIN
+	OUT	(KIO_KIOCMD),A		; DO IT
+#ENDIF	
 ;
 	XOR	A
 	RET
@@ -90,3 +117,14 @@ KIO_DETECT:
 ;
 ;
 KIO_EXISTS	.DB	0
+;
+;--------------------------------------------------------------------------------------------------
+;   HBIOS MODULE TRAILER
+;--------------------------------------------------------------------------------------------------
+;
+END_KIO	.EQU	$
+SIZ_KIO	.EQU	END_KIO - ORG_KIO
+;	
+	MEMECHO	"KIO occupies "
+	MEMECHO	SIZ_KIO
+	MEMECHO	" bytes.\n"

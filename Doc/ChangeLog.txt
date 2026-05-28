@@ -1,3 +1,196 @@
+Version 3.7
+-----------
+- ???: Added support for MECB platform
+- WBW: Split SDMODE_PIO into SDMODE_ZPIO & SDMODE_GPIO
+- HJB: Add HBIOS FastPath support into CP/NET
+
+Version 3.6
+-----------
+- RDG: Added VDA driver for Xosera FPGA-based VDC
+- MGG: Added COBOL language disk image
+- WDC: Added config options to PCF driver
+- WBW: Enabled dynamic CPU speed update on LCD screen
+- WBW: Improve LPT driver boot messaging when not detected (per Robb Bates)
+- WBW: Correct DS1307 boot date/time display (per Tadeusz Pycio)
+- WBW: Add -DELAY option to TUNE app (per Robb Bates)
+- RDG: Add online documentation site
+- WBW: Added enhanced Hi-Tech C Compiler files from Ladislau Szilagyi
+- WBW: Added boundary check to ram/rom disk driver
+- WBW: Per Peter Onion, switch KERMIT default file xfer mode to binary
+- J?L: Source for ZSDOS2 and BPBIOS Utilities (from disassembly)
+- WBW: Support ROM-based font storage
+- MAP: New Slice Inventory Rom App "S" display bootable slices, during boot
+- MAP: Device Inventory moved from HBIOS to Rom App, saving >1k space in HBIOS
+- MAP: Added disk image for all Infocom text adventure Games
+- M?R: Fixed formatting issue with SLABEL where Slice # < 10
+- WBW: Improved image creation process to allow user defined aggregates
+- WBW: Implemented config driven slice name and system image specification
+- D?N: Added native USB driver support (keyboard, floppy, mass storage)
+- MGG: Added sample program source files for all language disk iamges
+- WBW: Added support for S100 Dual CF Interface
+- WBW: Added support for S100 ESP32 SD Interface
+- MAP: User guide. Reorder sections around disk formatting
+- R?M: Randy Merkel provided ZSDOS Programmer's Manual as translated by Wayne Hortensius
+- WBW: Updated Cowgol disk image with latest COWFIX.COM from Ladislau Szilagyi
+- WBW: Preliminary support for S100 Computers Z80 CPU
+- HJB: Added MSX platform
+- M?R: Update Timer app with "zero" option
+- HJB: Update PPIDE driver, add support for MSX BEER IDE interface
+- HJB: Added loader for MSX
+- HJB: Added IDE driver master media detect option
+- WBW: Add support for S100 Serial I/O DLP Serial connection
+- P?D: Generate compressed ROM for EaZyZ80 512
+- DDW: Added support for the 'N8PC' platform. Includes support for the M6242 RTC chip
+- JMD: Added VGMINFO application
+- WBW: Created SCSI Driver derived from code from Jay Cotton
+- WBW: Add official RC2014 platform (derived from RCZ80)
+- D?N: Added improved TMS Driver hardware/configuration detection and reporting
+- WBW: Removed driver module INIT lists, replaced with init phase system
+- JMD: Support Coleco AY-3-8910 ports in TUNE and HBIOS
+
+Version 3.5.1
+-------------
+- WBW: Fix CPMLDR.SYS & ZPMLDR.SYS for SYSCOPY (reported by Guido Santer)
+- MAP: Enhanced SLR Tools Disk Image with Plus versions
+- WBW: Add missing BCLOAD file to MS BASIC Compiler Disk Image (reported by Marshall Gates)
+- WBW: Doc improvements (per Fraser and Rob Gowin)
+- WBW: Correct ZMP application crash
+- MAP: Contribution of the SLABEL.COM tool for displaying and changing slice labels.
+- MAP: Hardware documentation, Significant new content added with project links.
+
+Version 3.5
+-----------
+- M?F: Fix for hours display in HBRTC application
+- M?F: Fix for assembly error in DS1501RTC driver
+- WBW: Add VT-100 graphics char selection to Propeller firmware
+- WBW: Allow all lines of VGA display to be used on Propeller firmware
+- WBW: Allow front panel LED/Switch bits to be inverted in config
+- WBW: Add API to expose application banks available
+- WBW: Added console takeover at boot loader prompt
+- L?N: Fixed Propeller font vertical line character to align properly
+- L?S: EF9345 video display controller driver
+- WBW: Added Cowgol disk image based on the work of Ladislau Szilagyi
+- WBW: Added support for CP/NET on Duodyne Disk I/O
+- DDW: Added support for Duodyne Media board
+- WBW: Auto restore TMS video on user reset (CP/M warm boot)
+- L?B: Added support for NABU w/ RomWBW Option Board
+- MAP: Reorganization of Doc directory introducing subfolders
+- WBW: Upgraded BBCBASIC to v5.00
+- W?S: Updated FLASH utility to v1.3.9
+- WBW: Support RCBus PS/2 Keyboard (EP/Sally)
+- M?R: Update Timer app to display output in decimal
+- WBW: Preliminary support for S100 FPGA Z80 platform
+- WBW: Added simple serial (SSER) driver
+- WBW: Added preliminary support for S100 FPGA Z80 SD Cards
+- M?R: Consolidated ROM Applications document into the Applications document
+- M?R: Reviewed and substantially improved the Applications document
+- WBW: Added support for DS1305 RTC on S100 FPGA Z80
+- WBW: Added support for Les Bird's RCBus Graphics/Sound/Joystick module
+- WBW: Added support for Les Bird's Dual 16C550 UART module
+- WBW: Refactor UART driver for more flexible configuration
+- M?R: Added hour/minute/second display to timer app
+- WBW: Substantial customization of NZ-COM disk image
+- WBW: Refactor build post-processing (ZRC, ZZRCC, etc.)
+- MAP: Improved section Real Time Clock in User Guide document
+- WBW: Support for Hitachi HD44780-based LCD display
+- DRJ: Added support for Genesis STD Bus Z180 platform
+- MAP: Improved section Disk Management in User Guide document
+- WBW: Add CPU speed selection for HEATH platform to HBIOS
+- WBW: Add Warm/Cold reboot options to CPUSPD utility
+- D?N: Added support for eZ80 CPU
+- MAP: Contributed COPYSL utility that allows disk slices to be copied
+- MAP: Added new HBIOS function EXT_SLICE, extended disk slice info
+- MAP: ROMLDR now uses EXT_SLICE to get Slice Sector for boot
+- MAP: CBIOS now uses EXT_SLICE during drive selection
+- MAP: CPM3 Boot Loader, and BIOS (drive select) now use EXT_SLICE
+- M?R: Added REBOOT application
+- MAP: Significant improvement in Disk Catalog document
+- MAP: Added Disk Image for the Z3PLUS (Z-System for CP/M-Plus) os.
+- H?H: Fix XModem 12.3 WRERR to put CAN char in proper register to send.
+- MAP: Added support for dynamic HBIOS config via (RTC) NVRAM
+- MAP: Added boot application to allow config of NVRAM options
+- MAP: Configuration of autoboot disk/app added to NVRAM config
+- WBW: Autoboot is now handled in separate prompt during RomWBW startup
+- MAP: Added additional tools (Linker/Disasembler) to the Z80ASM Disk Image
+- PMS: Support interrupt-driven PS2 Keyboard Interface
+- D?M: Added NetBoot support for Duodyne
+- WBW: Add options to TUNE/HBIOS to force detection of MSX and RC AY/YM standard PSG ports
+- MAP: Added /B=OPTIONS for automated drive assignment to ASSIGN.COM
+- WBW: Added TE Editor (Ladislau Szilagyi)
+- WBW: Refresh Cowgol disk image (Ladislau Szilagyi)
+
+Version 3.4
+-----------
+NOTE: Changes require HBIOS/CBIOS/Apps sync, version bump to 3.4 to ensure integrity
+- WBW: Device type number moved from upper nibble to full byte
+- A?C: Support for EP ITX-Mini Z180 Platform
+- M?R: Significant improvement in User Guide document
+- J?P: Preliminary support for Monsputer (MON)
+- JLC: Standardize TMS driver memory map for compatibility
+- WBW: Improved IDE device detection
+- WBW: Fixed decompression when run on Z280
+- K?B: WDATE generic HBIOS date/time utility
+- WBW: Create new DSKY framework with simple driver style interface
+- JBL: Added ColecoVision config in TMS driver
+- WBW: Added support for interrupt mode 1 on Z180
+- WBW: Added S100 platform
+- WBW: Added Duodyne platform
+- WBW: Incorporated John Monahan's S100 Monitor in S100 platform build
+- WBW: Support ESP32 on Duodyne
+- M?C: Fixed port specification when using XM.COM send transfers
+- PMS: Support for Duodyne DMA
+- WBW: Added Serial ROM (SROM.COM) utility
+- WBW: Support S100 Propeller Console
+- SCC: Added support for SC700
+- WBW: Added Heath H8 platform
+- D?J: Enhanced build to run on Raspberry Pi 4
+- WBW: Complete overhaul of ROMless boot operation
+- WBW: Prevent access to slices outside of partition
+- T?P: Contributed the HTALK utility
+- WBW: CTS stall detection
+- W?S: Updated FLASH utility to v1.3.7
+- L?N: Updated UNARC to new OS universal version
+- B?C: Added support for Z1RCC
+- M?R: User Guide enhancements and corrections
+- D?H: Added support for specification of secondary console
+- WBW: Added platform for Monsputer
+- WBW: Added FAT.COM to standard ROM Disk (removed RMAC.COM & LINK.COM)
+
+Version 3.3
+-----------
+NOTE: v3.3 was never released
+- WBW: Support Front Panel switches
+- A?C: Preliminary support for Z80-Retro
+- A?C: Support for SD PIO
+- A?C: Support for Z80-Retro SD interface
+- WBW: Support per-drive floppy configuration
+- WBW: Support for Bill Shen's VGARC
+- WBW: Support for MG014 Parallel Port module + printer
+- WBW: Support for IMM Zip Drive on PPI interface (much inspiration from Alan Cox)
+- WBW: Support for PPA Zip Drive on PPI interface (much inspiration from Alan Cox)
+- WBW: Support for SyQuest SparQ Drive on PPI interface (much inspiration from Alan Cox)
+- WBW: Support for ATAPI Disk Drives (not CD-ROMs) on IDE and PPIDE interfaces
+- R?P: Added new disk images: Aztec C, MS BASIC Compiler, MS Fortran, Games, HiTech-C, Turbo Pascal, SLR Z80ASM
+- JBL: Added RCZ80 configuration for ColecoVision
+- WBW: Support for Z180 running interrupt mode 1
+- WBW: Preliminary support for S100 Computers Z180
+- WBW: Preliminary support for Dan Werner's ESP32 MBC Module
+- WBW: Early support for Duodyne base system (CPU/UART/ROM/RAM/RTC/SPK)
+- M?C: Fixed XM to allow specifying HBIOS port for send operations
+- WBW: Fix S100 Z180 LED operation (credit to Jay Cotton for finding this issue)
+- WBW: QPM system image is now combined with current CBIOS during build
+- WBW: Added framework for Heath platform
+- WBW: Support for USB Disks via CH375/CH376
+- D?J: Support for Raspberry Pi build process
+
+Version 3.2.1
+-------------
+- M?P: Fixed Zeta 2 FDD and CPUSPD config settings
+- WBW: Fixed SURVEY.COM (again)
+- DDW: Updates to DOS/65 binaries in disk images
+- PMS: Updates to VGMPLAY including support for YM2151
+- WBW: Fix for quark delay adjustment being trashed
+
 Version 3.2
 -----------
 - WBW: Version bump for release

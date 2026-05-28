@@ -1,9 +1,9 @@
 ===== CP/M-80 2.2 Disk for RomWBW =====
 
-This disk is one of several ready-to-run disks provided with RomWBW.  
-It contains a vanilla distribution of DRI's CP/M-80 2.2 adapted for 
-RomWBW.  The disk is bootable as is (the operating system image is 
-already embedded in the system tracks) and can be launched from the 
+This disk is one of several ready-to-run disks provided with RomWBW.
+It contains a vanilla distribution of DRI's CP/M-80 2.2 adapted for
+RomWBW.  The disk is bootable as is (the operating system image is
+already embedded in the system tracks) and can be launched from the
 RomWBW Loader prompt.
 
 The remainder of this document describes the usage and contents of
@@ -42,7 +42,7 @@ RomWBW Distribution.
 
 The following CP/M 2.2 files were distributed by DRI with the operating
 system or as supplemental add-on programs.  They are documented in the
-"CP/M Manual.pdf" document in the Doc directory of the Rom WBW
+"CP/M Manual.pdf" document in the Doc/CPM directory of the Rom WBW
 distribution.  MAC, RMAC, ZSID are supplemental programs from DRI
 with separate standalone documentation which is not included in the
 RomWBW package (but easily found on the Internet via Google search).
@@ -88,6 +88,8 @@ XM.COM - XModem file transfer application
 ZMP.COM - ZModem communications program (requires dedicated comm port)
 ZMP.DOC - Documentation for ZMP
 ZMP.HLP - Help file for ZMP
+ZMP.CFG - Configuration file for ZMP
+ZMP.FON - Phone book for ZMP
 ZMXFER.OVR - Overlay file for ZMP
 ZMTERM.OVR - Overlay file for ZMP
 ZMINIT.OVR - Overlay file for ZMP
@@ -134,15 +136,21 @@ LBREXT.COM - Extract file from .LBR libraries
 LBREXT36.CFG - ZCNFG configuration file for LBREXT
 ZXD.COM - Enhanced directory lister w/ date/time stamp support
 ZXD.CFG - ZCNFG configuration file for ZXD
+BBCBASIC.COM - BBC BASIC CP/M Version by R.T.Russell
+BBCBASIC.TXT - Help file for BBC BASIC
+GENHEX.COM - Generates an Intel Hex file from the input file
+LS.COM - An alternative file listing to DIR
+LSWEEP.COM - Can extract and view member files of an .LBR archive
+HELLO.ASM - Sample assembly language application
 
 == Testing Applications (User Area 2) ==
 
 User area 2 contains a variety of hardware testing applications.
 These are generally user contributed and have no documentation.
 
-N.B., these applications are frequently not compatible with all RomWBW 
-hardware.  They are included here as a convenience.  If applicable, 
-your hardware documentation should refer to them and provide usage 
+N.B., these applications are frequently not compatible with all RomWBW
+hardware.  They are included here as a convenience.  If applicable,
+your hardware documentation should refer to them and provide usage
 instructions.
 
 == Sample Tune Files (User Area 3) ==
@@ -159,4 +167,4 @@ in this user area for more information.
 N.B., at a minimum, some of the files in this user area must be copied
 to user area 0 for CP/NET to work properly.
 
--- WBW 3:20 PM 8/27/2021
+-- WBW 12:57 PM 7/29/2025

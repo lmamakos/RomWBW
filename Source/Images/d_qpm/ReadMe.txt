@@ -7,8 +7,8 @@ tracks was created using QINSTALL with default settings EXCEPT
 for the two settings described under Notes (current drive/user
 storage address and TIMDAT vector).
 
-QINSTALL can be run again as desired to further customize your 
-installation.  However, note that QINSTALL does NOT remember prior 
+QINSTALL can be run again as desired to further customize your
+installation.  However, note that QINSTALL does NOT remember prior
 settings, so you must reapply all settings you made previously
 especially the two setting changes described below.
 
@@ -38,9 +38,17 @@ system that is using interrupt mode 1.  DEBUGZ can be configured
 
 The QSTAMP program, which is used to initialize a disk for date/time
 stamping, misbehavews when run on the (new) RomWBW 1024 directory
-format disks.  It creates an invalid directory entry for the
-date/time stamp data file.  This is definitely a QP/M issue.  The
-directory entry can be manually corrected.
+format disks.  It creates an invalid directory entry for the date/time
+stamp data file.  This is definitely a QP/M issue.  The directory entry
+can be manually corrected.  Specifically the byte offset 15 should
+contain the number of 128-byte records in the file.  Instead, it is set
+to 0x01.  You can edit the entry, change it to 0x80 and everything
+starts working.
+
+There are two text files (QPMCMDS.TXT and QPMUTILS.TXT) included.  They
+came from the original QP/M 2.7 distribution.  These files have
+escape sequences imbedded in them which makes them look a little
+strange depending on the terminal emulation you are using.
 
 == QPM 2.7 Files ==
 
@@ -48,10 +56,9 @@ The following files came from the official QP/M distribution.  Actually,
 they came from 3 Microcode Consulting files (qpm27.zip, debugz.zip,
 and linkz.zip).  The original distribution files can be found on the
 Microcode Consulting website at https://www.microcodeconsulting.com/.
-Documentation (pdf) files are incuded in these original distribution
-.zip files.  These documentation files have not been included in the
-RomWBW distribution.  Please retrieve them yourself from the website
-if desired.
+Documentation (pdf) files are included in these original distribution
+.zip files.  These documentation files have been included in the
+RomWBW distribution in the Doc folder.
 
 D.COM - Directory lister
 DBGINST.COM - Configures DEBUGZ debugger
@@ -85,7 +92,7 @@ The following files have been included from CP/M 2.2.  These files
 provide various functionality that is not really available from the
 ZSDOS applications themselves.  For example, the CP/M 2.2 application
 called STAT is useful for modifying the IOBYTE.  Most of these
-applications are documented in the "CPM Manual.pdf" document in the Doc
+applications are documented in the "CPM Manual.pdf" document in the Doc/CPM
 directory of the RomWBW distribution.
 
 ASM.COM - DRI 8080 assembler producing Intel hex files
@@ -122,6 +129,8 @@ XM.COM - XModem file transfer application
 ZMP.COM - ZModem communications program (requires dedicated comm port)
 ZMP.DOC - Documentation for ZMP
 ZMP.HLP - Help file for ZMP
+ZMP.CFG - Configuration file for ZMP
+ZMP.FON - Phone book for ZMP
 ZMXFER.OVR - Overlay file for ZMP
 ZMTERM.OVR - Overlay file for ZMP
 ZMINIT.OVR - Overlay file for ZMP
@@ -168,6 +177,11 @@ LBREXT.COM - Extract file from .LBR libraries
 LBREXT36.CFG - ZCNFG configuration file for LBREXT
 ZXD.COM - Enhanced directory lister w/ date/time stamp support
 ZXD.CFG - ZCNFG configuration file for ZXD
+BBCBASIC.COM - BBC BASIC CP/M Version by R.T.Russell
+BBCBASIC.TXT - Help file for BBC BASIC
+GENHEX.COM - Generates an Intel Hex file from the input file
+LS.COM - An alternative file listing to DIR
+LSWEEP.COM - Can extract and view member files of an .LBR archive
 
 == Testing Applications (User Area 2) ==
 

@@ -66,28 +66,30 @@
 ; RTC LATCH WRITE
 ; ---------------
 ;
-; BIT	SBC	SBC-004	MFPIC	N8	N8-CSIO	MK4	SC130	SC131	SC126		MBC	RPH
-; -----	-------	-------	-------	-------	-------	-------	-------	-------	---------------	------- -------
-; D7	RTC_OUT RTC_OUT	--	RTC_OUT RTC_OUT	RTC_OUT	--	--	RTC_OUT,I2C_SDA	RTC_OUT	RTC_OUT
-; D6	RTC_CLK RTC_CLK	--	RTC_CLK RTC_CLK	RTC_CLK	--	--	RTC_CLK		RTC_CLK	RTC_CLK
-; D5	/RTC_WE /RTC_WE	--	/RTC_WE /RTC_WE	/RTC_WE	--	--	/RTC_WE		/RTC_WE	/RTC_WE
-; D4	RTC_CE	RTC_CE	--	RTC_CE  RTC_CE	RTC_CE	--	--	RTC_CE		RTC_CE	RTC_CE
-; D3	NC	CLKSEL	/RTC_CE	NC	NC	NC	--	--	/SPI_CS2	CLKSEL	--
-; D2	NC	SPK	RTC_CLK	SPI_CS	SPI_CS	NC	/SPI_CS1/SPI_CS1/SPI_CS1	SPK	--
-; D1	--	--	RTC_WE	SPI_CLK	NC	NC	--	--	FS		LED1	--
-; D0	--	--	RTC_OUT	SPI_DI	NC	NC	--	--	I2C_SCL		LED0	--
+; BIT	SBC	RCBUS	SBC-004	MFPIC	K80W  	N8	N8-CSIO	MK4	SC126		SC130	SC131	SC140	SC503	SC722	MBC	RPH
+; -----	-------	-------	-------	-------	-------	-------	-------	-------	---------------	-------	-------	-------	-------	-------	------- -------
+; D7	RTC_OUT RTC_OUT RTC_OUT	--	--	RTC_OUT RTC_OUT	RTC_OUT	RTC_OUT,I2C_SDA	--	--	--	--	--	RTC_OUT	RTC_OUT
+; D6	RTC_CLK RTC_CLK RTC_CLK	--	--	RTC_CLK RTC_CLK	RTC_CLK	RTC_CLK		--	--	--	--	--	RTC_CLK	RTC_CLK
+; D5	/RTC_WE /RTC_WE /RTC_WE	--	--	/RTC_WE /RTC_WE	/RTC_WE	/RTC_WE		--	--	--	--	--	/RTC_WE	/RTC_WE
+; D4	RTC_CE	RTC_CE	RTC_CE	--	--	RTC_CE  RTC_CE	RTC_CE	RTC_CE		--	--	--	--	--	RTC_CE	RTC_CE
+; D3	NC	NC	CLKSEL	/RTC_CE	/RTC_CE	NC	NC	NC	/SPI_CS2	--	--	--	--	--	CLKSEL	--
+; D2	NC	NC	SPK	RTC_CLK	RTC_CLK	SPI_CS	SPI_CS	NC	/SPI_CS1	/SPI_CS1/SPI_CS1/SPI_CS1/SPI_CS1/SPI_CS1SPK	--
+; D1	--	--	--	RTC_WE	RTC_WE	SPI_CLK	NC	NC	FS		--	--	--	--	--	LED1	--
+; D0	--	--	--	RTC_OUT	RTC_OUT	SPI_DI	NC	NC	I2C_SCL		--	--	--	--	--	LED0	--
+;                                                                                                                       
+; RTC LATCH LATCH READ                                                                                                  
+; --------------------                                                                                                  
+;                                                                                                                       
+; D7	--	--	--	--	--	--	--	--	I2C_SDA		--	--	--	--	--	--	--
+; D6	CFG	--	CFG	--	--	SPI_DO	CFG	--	--		--	--	--	--	--	CFG	--
+; D5	--	--	--	--	--	--	--	--	--		--	--	--	--	--	--	--
+; D4	--	--	--	--	--	--	--	--	--		--	--	--	--	--	--	--
+; D3	--	--	--	--	--	--	--	--	--		--	--	--	--	--	--	--
+; D2	--	--	--	--	--	--	--	--	--		--	--	--	--	--	--	--
+; D1	--	--	--	--	--	--	--	--	--		--	--	--	--	--	CLKSEL	--
+; D0	RTC_IN	RTC_IN	RTC_IN	RTC_IN	RTC_IN	RTC_IN	RTC_IN	RTC_IN	RTC_IN		--	--	--	--	--	RTC_IN	RTC_IN
 ;
-; RTC LATCH READ
-; --------------
-;
-; D7	--	--	--	--	--	--	--	--	I2C_SDA		--	--
-; D6	CFG	CFG	--	SPI_DO	CFG	--	--	--	--		CFG	--
-; D5	--	--	--	--	--	--	--	--	--		--	--
-; D4	--	--	--	--	--	--	--	--	--		--	--
-; D3	--	--	--	--	--	--	--	--	--		--	--
-; D2	--	--	--	--	--	--	--	--	--		--	--
-; D1	----	--	--	--	--	--	--	--	--		CLKSEL	--
-; D0	RTC_IN	RTC_IN	RTC_IN	RTC_IN	RTC_IN	RTC_IN	--	--	RTC_IN		RTC_IN	RTC_IN
+	DEVECHO	"DSRTC: MODE="
 ;
 #IF (DSRTCMODE == DSRTCMODE_STD)
 ;
@@ -105,14 +107,7 @@ RTCDEF		.SET	RTCDEF | DSRTC_IDLE	; FOR HBIOS MAINLINE
 ;
 #DEFINE	DSRTC_OPRVAL	HB_RTCVAL
 ;
-; VALUES FOR DIFFERENT BATTERY OR SUPERCAPACITOR CHARGE RATES
-;
-DS1d2k		.EQU	%10100101	; 1 DIODE 2K RESISTOR (DEFAULT)
-DS1d4k		.EQU	%10100110	; 1 DIODE 4K RESISTOR
-DS1d8k		.EQU	%10100111	; 1 DOIDE 8K RESISTOR
-DS2d2k		.EQU	%10101001	; 2 DIODES 2K RESISTOR
-DS2d4k		.EQU	%10101010	; 2 DIODES 4K RESISTOR
-DS2d8k		.EQU	%10101011	; 2 DIODES 8K RESISTOR
+		DEVECHO	"STD"
 ;
 #ENDIF
 ;
@@ -130,21 +125,65 @@ DSRTC_IDLE	.EQU	%00001000	; QUIESCENT STATE
 ;
 #DEFINE	DSRTC_OPRVAL	DSRTC_RTCVAL
 ;
+		DEVECHO	"MFPIC"
+;
 #ENDIF
 ;
+#IF (DSRTCMODE == DSRTCMODE_K80W)
+;
+DSRTC_IO	.EQU	RTCIO		; RTC PORT
+;
+DSRTC_DATA	.EQU	%00000001	; BIT 0 IS RTC DATA OUT
+DSRTC_CLK	.EQU	%00000100	; BIT 2 IS RTC CLOCK (CLK)
+DSRTC_WR	.EQU	%00000010	; BIT 1 IS DATA DIRECTION (WE)
+DSRTC_CE	.EQU	%00001000	; BIT 3 CHIP ENABLE (/CE)
+;
+DSRTC_MASK	.EQU	%00001111	; MASK FOR BITS WE OWN IN RTC LATCH PORT
+DSRTC_IDLE	.EQU	%00001000	; QUIESCENT STATE
+;
+#DEFINE	DSRTC_OPRVAL	HB_RTCVAL
+;
+		DEVECHO	"K80W"
+;
+#ENDIF
+;
+		DEVECHO	", IO="
+		DEVECHO	DSRTC_IO
+		DEVECHO	"\n"
+;
+; VALUES FOR DIFFERENT BATTERY OR SUPERCAPACITOR CHARGE RATES
+;
+DS1d2k		.EQU	%10100101	; 1 DIODE 2K RESISTOR (DEFAULT)
+DS1d4k		.EQU	%10100110	; 1 DIODE 4K RESISTOR
+DS1d8k		.EQU	%10100111	; 1 DOIDE 8K RESISTOR
+DS2d2k		.EQU	%10101001	; 2 DIODES 2K RESISTOR
+DS2d4k		.EQU	%10101010	; 2 DIODES 4K RESISTOR
+DS2d8k		.EQU	%10101011	; 2 DIODES 8K RESISTOR
+;
 DSRTC_BUFSIZ	.EQU	7		; 7 BYTE BUFFER (YYMMDDHHMMSSWW)
+;
+;--------------------------------------------------------------------------------------------------
+;   HBIOS MODULE HEADER
+;--------------------------------------------------------------------------------------------------
+;
+ORG_DSRTC	.EQU	$
+;
+	.DW	SIZ_DSRTC		; MODULE SIZE
+	.DW	DSRTC_INITPHASE		; ADR OF INIT PHASE HANDLER
+;
+DSRTC_INITPHASE:
+	; INIT PHASE HANDLER, A=PHASE
+	CP	HB_PHASE_PREINIT	; PREINIT PHASE?
+	JP	Z,DSRTC_PREINIT		; DO PREINIT
+	CP	HB_PHASE_INIT		; INIT PHASE?
+	JP	Z,DSRTC_INIT		; DO INIT
+	RET				; DONE
 ;
 ; RTC DEVICE PRE-INITIALIZATION ENTRY
 ;
 DSRTC_PREINIT:
-;
-	;; SET RELEVANT BITS IN RTC LATCH SHADOW REGISTER
-	;; TO THEIR QUIESENT STATE
-	;LD	A,(DSRTC_OPRVAL)	; GET CURRENT SHADOW REG VAL
-	;AND	~DSRTC_MASK		; CLEAR OUR BITS
-	;OR	DSRTC_IDLE		; SET OUR IDLE BITS
-	;LD	(DSRTC_OPRVAL),A	; SAVE IT
-;
+	XOR	A			; ZERO
+	LD	(DSRTC_STAT),A		; CLEAR STATUS
 	CALL	DSRTC_DETECT		; HARDWARE DETECTION
 	LD	(DSRTC_STAT),A		; SAVE RESULT
 	RET	NZ			; ABORT IF ERROR
@@ -177,6 +216,9 @@ DSRTC_INIT:
 #ENDIF
 #IF (DSRTCMODE == DSRTCMODE_MFPIC)
 	PRTS("MFPIC$")
+#ENDIF
+#IF (DSRTCMODE == DSRTCMODE_K80W)
+	PRTS("K80W$")
 #ENDIF
 ;
 	; PRINT RTC LATCH PORT ADDRESS
@@ -457,6 +499,7 @@ DSRTC_DETECT:
 DSRTC_DETECT1:
 	PUSH	AF			; SAVE STATUS
 	LD	A,(DSRTC_TEMP)		; GET SAVED VALUE
+	LD	E,A			; TO E
 	LD	C,30			; NVRAM INDEX 30
 	CALL	DSRTC_SETBYT		; SAVE IT
 	POP	AF			; RECOVER STATUS
@@ -586,7 +629,7 @@ DSRTC_CMD:
 	LD	A,(DSRTC_OPRVAL)	; INIT A WITH QUIESCENT STATE
 	OUT	(DSRTC_IO),A		; WRITE TO PORT
 	CALL	DLY2			; DELAY 2 * 27 T-STATES
-#IF (DSRTCMODE == DSRTCMODE_MFPIC)
+#IF ((DSRTCMODE == DSRTCMODE_MFPIC) | (DSRTCMODE == DSRTCMODE_K80W))
 	AND	~DSRTC_CE		; ASSERT CE (LOW)
 #ELSE
 	OR	DSRTC_CE		; ASSERT CE (HIGH)
@@ -612,7 +655,7 @@ DSRTC_CMD:
 ;
 DSRTC_PUT:
 	LD	B,8			; LOOP FOR 8 BITS
-#IF (DSRTCMODE == DSRTCMODE_MFPIC)
+#IF ((DSRTCMODE == DSRTCMODE_MFPIC) | (DSRTCMODE == DSRTCMODE_K80W))
 	OR	DSRTC_WR		; SET WRITE MODE
 #ELSE
 	AND	~DSRTC_RD		; SET WRITE MODE
@@ -622,7 +665,7 @@ DSRTC_PUT1:
 	OUT	(DSRTC_IO),A		; DO IT
 	CALL	DLY1			; DELAY 27 T-STATES
 
-#IF (DSRTCMODE == DSRTCMODE_MFPIC)
+#IF ((DSRTCMODE == DSRTCMODE_MFPIC) | (DSRTCMODE == DSRTCMODE_K80W))
 	RRA				; PREP ACCUM TO GET DATA BIT IN CARRY
 	RR	E			; ROTATE NEXT BIT TO SEND INTO CARRY
 	RLA				; ROTATE BITS BACK TO CORRECT POSTIIONS
@@ -655,7 +698,7 @@ DSRTC_PUT1:
 DSRTC_GET:
 	LD	E,0			; INITIALIZE WORKING VALUE TO 0
 	LD	B,8			; LOOP FOR 8 BITS
-#IF (DSRTCMODE == DSRTCMODE_MFPIC)
+#IF ((DSRTCMODE == DSRTCMODE_MFPIC) | (DSRTCMODE == DSRTCMODE_K80W))
 	AND	~DSRTC_WR		; SET READ MODE
 #ELSE
 	OR	DSRTC_RD		; SET READ MODE
@@ -712,7 +755,7 @@ DSRTC_END:
 DSRTC_STAT	.DB	0		; DEVICE STATUS (0=OK)
 DSRTC_TEMP	.DB	0		; TEMP VALUE STORAGE
 ;
-#IF (DSRTCMODE == DSRTCMODE_MFPIC)
+#IF ((DSRTCMODE == DSRTCMODE_MFPIC) | (DSRTCMODE == DSRTCMODE_K80W))
 DSRTC_RTCVAL	.DB	DSRTC_IDLE	; LOCAL LATCH SHADOW FOR MFPIC
 #ENDIF
 ;
@@ -739,3 +782,14 @@ DSRTC_TIMBUF	.FILL	6,0		; 6 BYTES FOR GETTIM
 DSRTC_TIMDEF:	; DEFAULT TIME VALUE TO INIT CLOCK
 		.DB	$00,$01,$01	; 2000-01-01
 		.DB	$00,$00,$00	; 00:00:00
+;
+;--------------------------------------------------------------------------------------------------
+;   HBIOS MODULE TRAILER
+;--------------------------------------------------------------------------------------------------
+;
+END_DSRTC	.EQU	$
+SIZ_DSRTC	.EQU	END_DSRTC - ORG_DSRTC
+;	
+	MEMECHO	"DSRTC occupies "
+	MEMECHO	SIZ_DSRTC
+	MEMECHO	" bytes.\n"

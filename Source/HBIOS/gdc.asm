@@ -37,22 +37,62 @@ GDC_COLS	.EQU	80
 ; BE USED TO ALLOW FOR MULTIPLE MONITOR TIMINGS AND/OR FONT
 ; DEFINITIONS.
 ;
+	DEVECHO	"GDC: MODE="
+;
+#IF (GDCMODE == GDCMODE_ECB)
+	DEVECHO	"ECB"
+#ENDIF
+#IF (GDCMODE == GDCMODE_RPH)
+	DEVECHO	"RPH"
+#ENDIF
+;
+	DEVECHO	", DISPLAY="
+;
 #IF (GDCMON == GDCMON_CGA)
   #DEFINE	USEFONTCGA
   #DEFINE	GDC_FONT FONTCGA
+	DEVECHO	"CGA"
 #ENDIF
 ;
 #IF (GDCMON == GDCMON_EGA)
   #DEFINE	USEFONT8X16
   #DEFINE	GDC_FONT FONT8X16
+	DEVECHO	"EGA"
 #ENDIF
 ;
+	DEVECHO	", IO="
+	DEVECHO	GDC_BASE
+	DEVECHO	"\n"
+;
 TERMENABLE	.SET	TRUE		; INCLUDE TERMINAL PSEUDODEVICE DRIVER
+KBDENABLE	.SET	TRUE		; INCLUDE KBD KEYBOARD SUPPORT
+;
+;--------------------------------------------------------------------------------------------------
+;   HBIOS MODULE HEADER
+;--------------------------------------------------------------------------------------------------
+;
+ORG_GDC	.EQU	$
+;
+	.DW	SIZ_GDC			; MODULE SIZE
+	.DW	GDC_INITPHASE		; ADR OF INIT PHASE HANDLER
+;
+GDC_INITPHASE:
+	; INIT PHASE HANDLER, A=PHASE
+	CP	HB_PHASE_PREINIT	; PREINIT PHASE?
+	JP	Z,GDC_PREINIT		; DO PREINIT
+	CP	HB_PHASE_INIT		; INIT PHASE?
+	JP	Z,GDC_INIT		; DO INIT
+	RET				; DONE
 ;
 ;======================================================================
 ; GDC DRIVER - INITIALIZATION
 ;======================================================================
 ;
+GDC_PREINIT:
+	LD	IY,GDC_IDAT		; POINTER TO INSTANCE DATA
+	JP	KBD_PREINIT		; INITIALIZE KEYBOARD
+;	RET
+
 GDC_INIT:
 	LD	IY,GDC_IDAT		; POINTER TO INSTANCE DATA
 	
@@ -70,7 +110,7 @@ GDC_INIT:
 #ENDIF	
 #IF (GDCMON == GDCMON_EGA)
 	PRTS(" EGA$")
-#ENDIF	
+#ENDIF
 ;
 	PRTS(" IO=0x$")
 	LD	A,GDC_BASE
@@ -143,8 +183,7 @@ GDC_VDAQRY:	; VIDEO INFORMATION QUERY
 	RET
 ;
 GDC_VDARES:	; VIDEO SYSTEM RESET
-	; *** TODO: RESET VIDEO SYSTEM HERE, CLEAR SCREEN,
-	; CURSOR TO TOP LEFT, CLEAR ATTRIBUTES
+	; *** TODO: RESET VIDEO SYSTEM HERE
 	XOR	A
 	RET
 ;
@@ -172,8 +211,13 @@ GDC_VDASAT:	; SET ATTRIBUTES
 	RET
 
 GDC_VDASCO:	; SET COLOR
+	; WE HANDLE ONLY PER-CHARACTER COLORS (D=0)
+	LD	A,D		; GET CHAR/SCREEN SCOPE
+	OR	A		; CHARACTER?
+	JR	NZ,GDC_VDASCO_Z	; IF NOT, JUST RETURN
 	LD	A,E		; GET THE INCOMING COLOR
 	LD	(GDC_COLOR),A	; AND SAVE FOR LATER
+GDC_VDASCO_Z:
 	XOR	A		; SIGNAL SUCCESS
 	RET
 
@@ -325,5 +369,17 @@ GDC_POS		.DW 	0	; CURRENT DISPLAY POSITION
 ;==================================================================================================
 ;
 GDC_IDAT:
+	.DB	KBDMODE_PS2	; PS/2 8242 KEYBOARD CONTROLLER
 	.DB	GDC_KBDST
 	.DB	GDC_KBDDATA
+;
+;--------------------------------------------------------------------------------------------------
+;   HBIOS MODULE TRAILER
+;--------------------------------------------------------------------------------------------------
+;
+END_GDC	.EQU	$
+SIZ_GDC	.EQU	END_GDC - ORG_GDC
+;	
+	MEMECHO	"GDC occupies "
+	MEMECHO	SIZ_GDC
+	MEMECHO	" bytes.\n"

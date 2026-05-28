@@ -1,6 +1,10 @@
 #
 # build the tools for linux and Darwin
 #
+
+.ONESHELL:
+.SHELLFLAGS = -ce
+
 UNAME := $(shell uname)
 
 all:

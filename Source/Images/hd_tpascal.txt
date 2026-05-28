@@ -1,0 +1,6 @@
+@Label="Turbo Pascal"
+@SysImage="../ZSDOS/zsys_wbw.sys"
+#
+# Add the ReadMe document
+#
+d_tpascal/ReadMe.txt 0:

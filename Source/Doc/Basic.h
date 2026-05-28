@@ -1,19 +1,27 @@
-$define{doc_ver}{Version 3.2}$
+$define{doc_ver}{Version 3.7}$
 $define{doc_product}{RomWBW}$
-$define{doc_root}{https://github.com/wwarthen/RomWBW/raw/master/Doc}$
+$define{file_root}{https://github.com/wwarthen/RomWBW/raw/master}$
+$define{doc_root}{$file_root$/Doc}$
 $ifndef{doc_title}$ $define{doc_title}{Document Title}$ $endif$
 $ifndef{doc_author}$ $define{doc_author}{Wayne Warthen}$ $endif$
 $define{doc_date}{$date{%d %b %Y}$}$
 $ifndef{doc_authmail}$ $define{doc_authmail}{wwarthen@gmail.com}$ $endif$
 $define{doc_orgname}{RetroBrew Computers Group}$
 $define{doc_orgurl}{www.retrobrewcomputers.org}$
+$define{doc_intro}{[RomWBW Introduction]($doc_root$/RomWBW Introduction.pdf)}$
 $define{doc_user}{[RomWBW User Guide]($doc_root$/RomWBW User Guide.pdf)}$
 $define{doc_sys}{[RomWBW System Guide]($doc_root$/RomWBW System Guide.pdf)}$
 $define{doc_apps}{[RomWBW Applications]($doc_root$/RomWBW Applications.pdf)}$
-$define{doc_romapps}{[RomWBW ROM Applications]($doc_root$/RomWBW ROM Applications.pdf)}$
 $define{doc_catalog}{[RomWBW Disk Catalog]($doc_root$/RomWBW Disk Catalog.pdf)}$
-$define{doc_errata}{[RomWBW Errata]($doc_root$/RomWBW Errata.pdf)}$
-
+$define{doc_hardware}{[RomWBW Hardware]($doc_root$/RomWBW Hardware.pdf)}$
+$ifdef{GFM}$
+  $define{doc_intro}{[RomWBW Introduction](Introduction.md)}$
+  $define{doc_user}{[RomWBW User Guide](UserGuide.md)}$
+  $define{doc_sys}{[RomWBW System Guide](SystemGuide.md)}$
+  $define{doc_apps}{[RomWBW Applications](Applications.md)}$
+  $define{doc_catalog}{[RomWBW Disk Catalog](Catalog.md)}$
+  $define{doc_hardware}{[RomWBW Hardware](Hardware.md)}$
+$endif$
 ---
 title: $doc_product$ $doc_title$
 subtitle: $doc_ver$

@@ -23,7 +23,13 @@ rtc_port	.equ	$70		; RTC latch port adr
 restart		.equ	$0000		; CP/M restart vector
 bdos		.equ	$0005		; BDOS invocation vector
 ;
-ident		.equ	$FFFE		; loc of RomWBW HBIOS ident ptr
+bf_sysreset	.equ	$F0		; restart system
+;
+bf_sysres_int	.equ	$00		; reset hbios internal
+bf_sysres_warm	.equ	$01		; warm start (restart boot loader)
+bf_sysres_cold	.equ	$02		; cold start
+;
+ident		.equ	$FFFC		; loc of RomWBW HBIOS ident ptr
 ;
 ;=======================================================================
 ;
@@ -113,6 +119,10 @@ main1:
 ;
 main2:
 	ret	z		; if end, nothing to do
+	cp	'W'		; warm boot?
+	jp	z,wboot		; if so, do it
+	cp	'C'		; cold boot?
+	jp	z,cboot		; if so, do it
 	cp	','		; no new speed?
 	jr	z,main2a	; go to wait states
 	; parse speed string (half, full, double)
@@ -161,6 +171,9 @@ parse_spd:
 	ld	c,2			; assume double speed
 	cp	'D'			; check it
 	jr	z,parse_spd1		; if equal, done
+	ld	c,3			; assume quad speed
+	cp	'Q'			; check it
+	jr	z,parse_spd1		; if equal, done
 	or	a			; clear CF
 	ccf				; set CF to indicate error
 	ret
@@ -189,9 +202,9 @@ show_spd:
 	ld	b,BF_SYSGET
 	ld	c,BF_SYSGET_CPUINFO
 	rst	08
-	jp	nz,err_not_sup
+	jp	nz,err_api
 	call	crlf2
-	ld	(cpu_spd),de		; save CPU speed for now
+	push	de			; save CPU speed for now
 	push	bc			; Oscillator speed to HL
 	pop	hl
 	ld	de,str_spacer
@@ -199,10 +212,18 @@ show_spd:
 	call	prtd3m			; print it
 	ld	de,str_oscspd
 	call	prtstr
+	call	crlf
+	ld	de,str_cpuspd
+	call	prtstr
+	pop	hl			; recover CPU speed
+	call	prtd3m			; print it
+	ld	de,str_mhz
+	call	prtstr
+;
 	ld	b,BF_SYSGET
 	ld	c,BF_SYSGET_CPUSPD
 	rst	08
-	jp	nz,err_not_sup
+	ret	nz			; no CPU speed info, done
 	push	de			; save wait states for now
 	ld	a,l
 	ld	de,str_slow
@@ -214,13 +235,11 @@ show_spd:
 	ld	de,str_dbl
 	cp	2
 	jr	z,show_spd1
+	ld	de,str_quad
+	cp	3
+	jr	z,show_spd1
 	jp	err_invalid
 show_spd1:
-	call	crlf
-	call	prtstr
-	ld	hl,(cpu_spd)		; recover CPU speed
-	call	prtd3m
-	ld	de,str_cpuspd
 	call	prtstr
 	pop	hl
 	ld	a,h			; memory wait states
@@ -264,6 +283,24 @@ usage:
 	or	$FF
 	ret
 ;
+; Handle Warm Boot
+;
+wboot:
+	ld	de,str_warmboot		; message
+	call	prtstr			; display it
+	ld	b,bf_sysreset		; system restart
+	ld	c,bf_sysres_warm	; warm start
+	call	$fff0			; call hbios
+;
+; Handle Cold Boot
+;
+cboot:
+	ld	de,str_coldboot		; message
+	call	prtstr			; display it
+	ld	b,bf_sysreset		; system restart
+	ld	c,bf_sysres_cold	; cold start
+	call	$fff0			; call hbios
+;
 ; Error Handlers
 ;
 err_una:
@@ -283,6 +320,9 @@ err_not_sup:
 	jr	err_ret
 err_invalid:
 	ld	de,str_err_invalid
+	jr	err_ret
+err_api:
+	ld	de,str_err_api
 	jr	err_ret
 ;
 err_ret:
@@ -504,9 +544,6 @@ prtd3m2:
 	call	prtchr
 prtd3m3:
 	ret
-
-
-
 ;
 ; Get the next non-blank character from (HL).
 ;
@@ -659,24 +696,32 @@ delay1:
 ; Constants
 ;=======================================================================
 ;
-str_banner		.db	"RomWBW CPU Speed Selector v0.5, 2-Feb-2022",0
+str_banner		.db	"RomWBW CPU Speed Selector v1.0, 11-Sep-2024",0
 str_spacer		.db	"  ",0
 str_oscspd		.db	" MHz Oscillator",0
-str_slow		.db	"  CPU speed is HALF (",0
-str_full		.db	"  CPU speed is FULL (",0
-str_dbl			.db	"  CPU speed is DOUBLE (",0
-str_cpuspd		.db	" MHz)",0
+str_cpuspd		.db	"  CPU speed is ",0
+str_mhz			.db	" MHz",0
+
+str_slow		.db	" (Half)",0
+str_full		.db	" (Full)",0
+str_dbl			.db	" (Double)",0
+str_quad		.db	" (Quad)",0
 str_memws		.db	" Memory Wait State(s)",0
 str_iows		.db	" I/O Wait State(s)",0
+str_warmboot		.db	"\r\n\r\nWarm booting...",0
+str_coldboot		.db	"\r\n\r\nCold booting...",0
 str_err_una		.db	"  ERROR: UNA not supported by application",0
 str_err_inv		.db	"  ERROR: Invalid BIOS (signature missing)",0
 str_err_ver		.db	"  ERROR: Unexpected HBIOS version",0
 str_err_parm		.db	"  ERROR: Parameter error (CPUSPD /? for usage)",0
-str_err_not_sup		.db	"  ERROR: Platform or configuration not supported!",0
+str_err_not_sup		.db	"  ERROR: Platform or configuration does not support CPU speed configuration!",0
 str_err_invalid		.db	"  ERROR: Invalid configuration!",0
+str_err_api		.db	"  ERROR: HBIOS API error!",0
 str_usage		.db	"  Usage: CPUSPD <cpuspd>,<memws>,<iows>\r\n"
+			.db	"         CPUSPD (W)armBoot\r\n"
+			.db	"         CPUSPD (C)oldBoot\r\n"
 			.db	"\r\n"
-			.db	"         <cpuspd>: \"Half\", \"Full\", or \"Double\"\r\n"
+			.db	"         <cpuspd>: (H)alf | (F)ull | (D)ouble | (Q)uad\r\n"
 			.db	"         <memws>:  Memory wait states\r\n"
 			.db	"         <iows>:   I/O wait states\r\n"
 			.db	"\r\n"
@@ -693,7 +738,6 @@ stack		.equ	$		; stack top
 ;
 ;
 tmpstr		.fill	9,0		; temp string (8 chars, 0 term)
-cpu_spd		.dw	0		; current cpu speed
 new_cpu_spd	.db	$FF		; new CPU speed
 new_ws_mem	.db	$FF		; new memory wait states
 new_ws_io	.db	$FF		; new I/O wait states
