@@ -268,5 +268,7 @@ call Build SZ80 t35_std || exit /b
 call Build UNA std || exit /b
 call Build MSX std || exit /b
 call Build MECB std || exit /b
+:: MRZ80: NOT IN THE DIST LIST YET, REVISIT ONCE VALIDATED ON TARGET
+:: call Build MRZ80 std || exit /b
 
 goto :eof

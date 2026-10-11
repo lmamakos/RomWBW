@@ -116,6 +116,7 @@ Others
 | [Genesis Z180 System]^7^                                    | STD     | GMZ180_std.rom                       |        115200 |
 | [Heath H8 Z80 System]^5^                                    | H8      | HEATH_std.rom                        |        115200 |
 | [MECB]^11^                                                  | ECB     | MECB_std.rom                         |         38400 |
+| [MrZ80 MiSTer FPGA Z80 System]^12^                          | -       | MRZ80_std.rom                        |             - |
 | [MSX]^9^                                                    | MSX     | MSX_std.rom                          |        115200 |
 | [N8 PC]^10^                                                 | ISA     | N8PC_std.rom                         |         38400 |
 | [NABU w/ RomWBW Option Board]^5^                            | NABU    | NABU_std.rom                         |        115200 |
@@ -139,6 +140,7 @@ Others
 | ^9^MSX Port by Henk Berends
 | ^10^Designed by Dan Werner
 | ^11^Designed by Digicool Things
+| ^12^MrZ80 MiSTer FPGA system. Implemented by Louis Mamakos.
 
 `\clearpage`{=latex}
 
@@ -653,6 +655,62 @@ late 1970’s and early 1980’s.
 - CH: IO=60
 - CHUSB: IO=62
 - CHUSB: IO=60
+
+`\clearpage`{=latex}
+
+## MrZ80 FPGA
+
+MrZ80 is a Z80 system for the MiSTer FPGA platform. 
+
+The FPGA loads an up to 512K long .BIN/.ROM file (the RomWBW ROM image)
+into SDRAM at physical address 0 and starts the Z80 from logical
+0x0000.  CPU execution starts at address 0.
+
+The Z80 memory space is mapped into the 128 MB of SDRAM
+(followed by 64 KB of Block RAM at the 128 MB mark) through a 4-frame
+16K paged MMU that is compatible with the Z2 memory manager, with
+extension registers for the additional address bits.  Writing the
+Z2-compatible lower frame registers automatically clears the upper
+8 bits to maintain compatability.
+
+It's also possible to load an (up to) 8MB disk image into the top
+8MB block of SDRAM to be used as a RAM disk or other storage.  This
+can be extended to independently load addition 8MB disk images in
+additional 8MB blocks before the first.
+
+* Serial console: bufferedUART (6850-ACIA compatible), the baud rate
+  is set in the MiSTer OSD menus, not in software
+* More detail: `HARDWARE.md` in the MrZ80 repository (../MrZ80)
+
+#### ROM Image File:  MRZ80_std.rom
+
+|                   |               |
+|-------------------|---------------|
+| Bus               | -             |
+| Default CPU Speed | 10.000 MHz    |
+| Interrupts        | None          |
+| System Timer      | None          |
+| Serial Default    | MiSTer OSD    |
+| Memory Manager    | Z2            |
+| ROM Size          | 512 KB        |
+| RAM Size          | 512 KB        |
+
+The 512K ROM image consists of the HBIOS banks followed by the 384K
+ROM disk; the 512K of RAM occupies the SDRAM directly above the ROM
+image (giving 256K of RAM disk).  This image is not yet included in
+the standard dist builds, build it with:
+
+```
+cd Source/HBIOS
+ROM_PLATFORM=MRZ80 ROM_CONFIG=std bash Build.sh
+```
+
+#### Supported Hardware
+
+- MMU: IO=176-188 (0xB0-0xBC, Z2 frame registers 0xB0-0xB3, always enabled)
+- SSER: IO=130, DATA=131 (bufferedUART, 6850-ACIA compatible)
+- MD: TYPE=RAM
+- MD: TYPE=ROM
 
 `\clearpage`{=latex}
 
