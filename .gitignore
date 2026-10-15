@@ -1,6 +1,7 @@
 # Not sure what patterns to apply
 # So ignoring all generated files explicitly
 
+*~
 **/*.[Bb][Ii][Nn]
 **/*.[Cc][Oo][Mm]
 **/*.[Oo][Bb][Jj]

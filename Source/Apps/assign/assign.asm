@@ -2623,6 +2623,7 @@ devtbl:				; device table
 	.dw	dev08, dev09, dev10, dev11
 	.dw	dev12, dev13, dev14, dev15
 	.dw	dev16, dev17, dev18, dev19
+	.dw	dev20
 ;
 devunk	.db	"?",0
 dev00	.db	"MD",0
@@ -2644,7 +2645,8 @@ dev15	.db	"USB",0
 dev16	.db	"ESPSD",0
 dev17	.db	"SCSI",0
 dev18	.db	"I2CEE",0
-dev19	.equ	devunk
+dev19	.db	"MRZ80SD",0
+dev20	.equ	devunk
 ;
 devcnt	.equ	20		; 19 device types defined
 ;

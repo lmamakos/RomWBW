@@ -9516,6 +9516,7 @@ HB_MODSTART	.EQU	$
 ;  - SYQ
 ;  - CH
 ;  - ESPSD
+;  - MRZ80SD
 ;  - SCSI
 ;  - CHSCSI
 ;  - CHUFI
@@ -9571,6 +9572,10 @@ HB_MODSTART	.EQU	$
 ;
 #IF (ESPSDENABLE)
   #INCLUDE "espsd.asm"
+#ENDIF
+;
+#IF (MRZ80SDENABLE)
+  #INCLUDE "mrz80sd.asm"
 #ENDIF
 ;
 #IF (SCSIENABLE)
@@ -9752,6 +9757,9 @@ HB_BOOT_REC	.DB	0		; BOOT MODE (0=NORMAL, 1=RECOVERY MODE)
 STR_BANNER	.DB	"\r\n\nRomWBW HBIOS v", BIOSVER, ", ", TIMESTAMP
 #IFDEF APPBOOT
 		.DB	" (App Boot)"
+#ENDIF
+#IF (PLATFORM == PLT_MRZ80)
+		.DB	"\r\n", 27,"[31m", "CONTENT WARNING: contains delicious LLM generated code!", 27,"[0m"
 #ENDIF
 		.DB	"$"
 STR_PLATFORM	.DB	PLATFORM_NAME

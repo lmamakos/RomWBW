@@ -58,8 +58,7 @@ if [ "${ROM_PLATFORM}" == "dist" ] ; then
 	ROM_PLATFORM="MSX"; ROM_CONFIG="std"; bash Build.sh
 	ROM_PLATFORM="MECB"; ROM_CONFIG="std"; bash Build.sh
 	ROM_PLATFORM="UNA"; ROM_CONFIG="std"; bash Build.sh
-	# MRZ80: NOT IN THE DIST LIST YET, REVISIT ONCE VALIDATED ON TARGET
-	# ROM_PLATFORM="MRZ80"; ROM_CONFIG="std"; bash Build.sh
+	ROM_PLATFORM="MRZ80"; ROM_CONFIG="std"; bash Build.sh
 	exit
 fi
 
