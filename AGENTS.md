@@ -1,0 +1,130 @@
+# RomWBW port for the MiSTer FPGA system
+
+This project is a port of RomWBW to add support for the MiSTer FPGA
+game system.  The MiSTer system is Z80 based, has 128 MB of SDRAM and
+64 KB of Block RAM, along with an MMU that's compatible with the MM_Z2
+support (though on different ports).  That project is called **MrZ80**
+and is developed in a seperate git repo.
+
+
+## Port status
+
+- Platform ID: `PLT_MRZ80` (29) in `Source/HBIOS/hbios.inc`
+- Config files: `Source/HBIOS/cfg_MRZ80.asm` and
+  `Source/HBIOS/Config/MRZ80_std.asm`
+- Build: `cd Source/HBIOS && ROM_PLATFORM=MRZ80 ROM_CONFIG=std bash Build.sh`
+  produces `Binary/MRZ80_std.rom` (plus `.upd` and `.com`).
+- The 512K `MRZ80_std.rom` **is** the .BIN file the MrZ80 FPGA loads:
+  4 x 32K HBIOS banks (HBIOS, loader/OS, apps, utils) followed by the
+  384K ROM disk.  Rename it to `.bin` if the MiSTer tooling requires
+  that extension.
+
+
+## Design decisions
+
+- 512K "ROM" = the .BIN image the FPGA loads into SDRAM at physical
+  address 0 (16K pages 0-31).  512K "RAM" = the SDRAM immediately
+  above it (pages 32-63, physical 0x40000-0x7FFFF).  This is the
+  canonical Z2 512+512 layout, so the standard `MM_Z2` memory manager
+  is reused unmodified:
+  - Frame registers `MPGSEL_0..3` = I/O ports 0xB0-0xB3
+  - `ROMSIZE=512` / `RAMSIZE=512` make all of the standard bank math
+    work: `HBX_BNKSEL` adds `ROMSIZE/32` (16 banks) for RAM, and the
+    common top-32K maps to physical pages 62/63.
+- MMU initialization (the MM_Z2 section of `Source/HBIOS/hbios.asm`)
+  runs the standard setup (ROMBOOT low-page writes + common-area
+  frame 2/3 setup), except the `OUT (MPGENA),A` enable write is
+  skipped for `PLT_MRZ80` because the MrZ80 MMU is always enabled.
+  `MPGENA` is additionally pointed at 0xBD, a reserved write-ignored
+  port in the MMU window, as belt-and-suspenders.
+- The FPGA preloads the .BIN into SDRAM and starts the Z80 at logical
+  0x0000 with the boot ROM already disabled, so no write to the 0x38
+  ROM-disable port is needed.
+- Console = the SSER simple serial driver on the bufferedUART
+  (6850-ACIA-compatible): status port 0x82 (read), data port 0x83.
+  ACIA status bit 0 = RX data available, bit 1 = TX empty, which
+  matches SSER's default ready-bit masks.  SSER never writes the 0x82
+  control register (important: a control write with bits 1:0 = 11
+  resets the ACIA).
+- The baud rate is set in the MiSTer OSD, not in software, so
+  `DEFSERCFG`/`SSERCFG` values are report-only.
+- `INTMODE=0`: the T80's `int_n` input is tied high in
+  `MicrocomputerZ80CPM.vhd`, so no interrupts are available and all
+  I/O is polled.  There is no RTC/clock driver yet, so CP/M time is
+  not maintained (see Future work).  The CPU runs at 10 MHz
+  (50 MHz core clock divided by 5).
+
+
+## MrZ80 I/O ports used by RomWBW
+
+| Port(s) | Function |
+|---------|----------|
+| `0x38`  | ROM-disable trigger. Any write disables the boot ROM at 0x0000-0x1FFF. Not needed when the .BIN is preloaded (ROM is already off). |
+| `0x82`  | bufferedUART: status (read) / control (write). |
+| `0x83`  | bufferedUART: data. |
+| `0x88`-`0x8F` | SPI SD card controller (`sd_controller.vhd`), driven by `mrz80sd.asm` (unit 2 of the MRZ80SD driver, `MRZ80SDCNT=2`). No size registers; capacity comes from `MRZ80SD1BLKS` (default `$FFFFFF`, set it to the real card size: a read past the card end hangs the controller until reset). Status bit 4 = init busy (stays set when no card is present). |
+| `0x90`-`0x97` | HPS image block device (`hps_blockdev.vhd`), driven by `mrz80sd.asm` (unit 1 of the MRZ80SD driver). Size registers at +5..+7. |
+| `0xB0`-`0xB3` | MMU frame 0-3 page registers, low byte (Z2-compatible). |
+| `0xB4`-`0xB7` | MMU frame 0-3 page registers, high byte (pages > 255; unused here since the max page number is 63). |
+| `0xB8`-`0xBC` | MMU direct-access window (4 pointer bytes + data port; unused). |
+| `0xBD`-`0xBF` | MMU reserved (reads 0, writes ignored). `MPGENA` is set to 0xBD. |
+
+
+## Technical background details
+
+More detail about the hardware implementation of the MrZ80 system is
+available in ../MrZ80/HARDWARE.md that describes the memory layout
+and various peripherals.
+
+### MMU
+
+The MMU maps 16K memory segments into 4 frames. The MMU is
+compatible with the MM_Z2 in the basic ways.  The differences come
+from supporting a 256MB address space, where the 128 MB of SDRAM
+occupies the region starting at physical address 0, and the small
+Block RAM starts right above it at the 128 MB mark.  The 8 bits
+available in each of the page frame registers is not sufficient to
+map all the address space, so there are additional registers to
+allow the remaining address bits to be specified.
+
+When writing the low bits of a page frame offset, the high bits are
+zeroed, and then a subsequent write can supply those.  If only the
+lower part of the address space is required, then the existing
+Z2-compatible mapping registers are all that are required.
+
+### ROM software
+
+The FPGA loads an up to 512K long .BIN file into SDRAM at physical
+address 0 and sets up the MMU so that the first 16K of Z80 logical
+memory maps to the loaded image (reset mapping: frame 0 -> SDRAM
+page 0, frames 1-3 -> SDRAM pages 1-3).  The boot ROM (in the 64K
+Block RAM at physical 0x8000000) is disabled whenever the SDRAM
+image is preloaded and execution starts at logical 0x0000.
+
+### RAM disk
+
+The 512K of RomWBW RAM occupies SDRAM pages 32-63, immediately above
+the 512K ROM image, giving the standard 512K-ROM bank layout: 12 ROM
+disk banks (384K) and 8 RAM disk banks (256K).
+
+### Serial ports
+
+There are 3 emulated serial ports available.  The MiSTer OSD
+(on-screen display) menus are used to specify the baud rate.  It's
+not possible to presently set the baud rate, bits per character or
+parity from code.  This may change in the future.
+
+The port wired into the Z80 I/O space is the `bufferedUART`
+(../MrZ80/Components/UART/bufferedUART.vhd): a 6850 ACIA compatible
+device with a 64-byte RX FIFO and hardware flow control.  It is 8N1
+only with no parity.  Note that it only transmits when `n_cts` is
+low; `n_dcd` is hardwired low but `n_cts` comes from the FPGA pin.
+
+
+## Future work / TODO
+
+- Real-time clock driver based on the BenchTimer at 0xC0-0xCF (ms
+  channels) once that peripheral is tested.  Until then CP/M time is
+  not maintained.
+
+- Add sound device(s)
