@@ -9,6 +9,18 @@ Version 3.7 \
 Wayne Warthen  ([wwarthen@gmail.com](mailto:wwarthen@gmail.com)) \
 02 Oct 2026
 
+# NOTE
+
+This repository is a fork of the
+[RomWBW github repository](https://github.com/wwarthen/RomWBW).
+It is a port of RomWBW to the Z80 MiSTer FPGA platform.  As this port
+was aided by the use of LLM AI technology, it's not elligble to be
+merged into the upstream RomWBW repository, though I'm told that I'm
+free to pursue this type of development.
+
+Louis Mamakos <louie@transsys.com>
+22 Oct 2026
+
 # Overview
 
 RomWBW software provides a complete, commercial quality implementation
