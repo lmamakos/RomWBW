@@ -40,14 +40,21 @@ and is developed in a seperate git repo.
 - The FPGA preloads the .BIN into SDRAM and starts the Z80 at logical
   0x0000 with the boot ROM already disabled, so no write to the 0x38
   ROM-disable port is needed.
-- Console = the SSER simple serial driver on the bufferedUART
-  (6850-ACIA-compatible): status port 0x82 (read), data port 0x83.
-  ACIA status bit 0 = RX data available, bit 1 = TX empty, which
-  matches SSER's default ready-bit masks.  SSER never writes the 0x82
-  control register (important: a control write with bits 1:0 = 11
-  resets the ACIA).
+- Consoles = the stock ACIA (6850) driver, two units (`ACIACNT=2`):
+  unit 0 = the serial port (bufferedUART, base 0x82, the boot console)
+  and unit 1 = the video terminal + keyboard (SBCTextDisplayRGB, base
+  0x80).  Both devices emulate the 6850 master reset that `ACIA_DETECT`
+  relies on (MrZ80 R44: control bits 1:0 = 11 -> status 00 until the
+  next control write).  `AUTOCON` lets a key pressed on either at the
+  loader prompt take the console.  The video terminal sends VT100/xterm
+  sequences for the arrow, Home/End, Ins, Page and function keys and 1B
+  for Esc.  (Before MrZ80 R44 the console was the SSER simple serial
+  driver on 0x82/0x83; its settings are still in `cfg_MRZ80.asm`,
+  disabled.)
 - The baud rate is set in the MiSTer OSD, not in software, so
-  `DEFSERCFG`/`SSERCFG` values are report-only.
+  `DEFSERCFG` is report-only.  `ACIA0CLK`/`ACIA1CLK` are set to 153600
+  (9600 x 16) only so that the driver's baud-rate check accepts 9600
+  with its divide-by-16 setting; the video terminal has no baud rate.
 - `INTMODE=0`: the T80's `int_n` input is tied high in
   `MicrocomputerZ80CPM.vhd`, so no interrupts are available and all
   I/O is polled.  There is no RTC/clock driver yet, so CP/M time is
@@ -60,7 +67,9 @@ and is developed in a seperate git repo.
 | Port(s) | Function |
 |---------|----------|
 | `0x38`  | ROM-disable trigger. Any write disables the boot ROM at 0x0000-0x1FFF. Not needed when the .BIN is preloaded (ROM is already off). |
-| `0x82`  | bufferedUART: status (read) / control (write). |
+| `0x80`  | Video terminal + keyboard (6850 model): status (read) / control (write). ACIA unit 1. |
+| `0x81`  | Video terminal: keyboard (read) / display (write). |
+| `0x82`  | bufferedUART: status (read) / control (write). ACIA unit 0. |
 | `0x83`  | bufferedUART: data. |
 | `0x88`-`0x8F` | SPI SD card controller (`sd_controller.vhd`), driven by `mrz80sd.asm` (unit 2 of the MRZ80SD driver, `MRZ80SDCNT=2`). No size registers; capacity comes from `MRZ80SD1BLKS` (default `$FFFFFF`, set it to the real card size: a read past the card end hangs the controller until reset). Status bit 4 = init busy (stays set when no card is present). |
 | `0x90`-`0x97` | HPS image block device (`hps_blockdev.vhd`), driven by `mrz80sd.asm` (unit 1 of the MRZ80SD driver). Size registers at +5..+7. |
