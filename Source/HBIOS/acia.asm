@@ -49,6 +49,11 @@
 ;               1 0 - DIVIDE BY 64
 ;               1 1 - MASTER RESET
 ;
+; INTERRUPT DRIVEN RECEIVE (RING BUFFER FILLED FROM THE IM1 CALL LIST) IS USED ONLY
+; WHEN ACIAINTS IS SET AND INTMODE IS 1.  OTHERWISE THE CHIP IS POLLED, WHICH IS
+; REQUIRED WHEN THE ACIA INT OUTPUT IS NOT WIRED TO THE CPU INT PIN.
+ACIA_INTS       .EQU    ACIAINTS & (INTMODE == 1)
+;
 ACIA_BUFSZ      .EQU    32              ; RECEIVE RING BUFFER SIZE
 ;
 ACIA_NONE       .EQU    0
@@ -126,7 +131,7 @@ ACIA_INITUNIT:
         INC     (HL)                    ; INCREMENT IT (FOR NEXT LOOP)
         LD      (IY),A                  ; UPDATE UNIT NUM
 ;
-#IF (INTMODE == 1)
+#IF (ACIA_INTS)
         ; ADD IM1 INT CALL LIST ENTRY
         LD      L,(IY+8)                ; GET INT HANDLER PTR
         LD      H,(IY+9)                ; ... INTO HL
@@ -164,7 +169,7 @@ ACIA_INIT1:
 ;
 ; INTERRUPT HANDLERS
 ;
-#IF (INTMODE != 1)
+#IF (ACIA_INTS == 0)
 ;
 ; NO INTERRUPT HANDLERS UNDER INTMODE 0.  GENERATE A PANIC
 ; IF SOMETHING TRIES TO CALL THEM.
@@ -175,7 +180,7 @@ ACIA1_INT:
 ;
 #ENDIF
 ;
-#IF (INTMODE == 1)
+#IF (ACIA_INTS)
 ;
 ACIA0_INT:
         LD      IY,ACIA0_CFG            ; POINT TO ACIA0 CFG
@@ -272,7 +277,7 @@ ACIA_FNTBL:
 ;
 ;
 ;
-#IF (INTMODE != 1)
+#IF (ACIA_INTS == 0)
 ;
 ACIA_IN:
         CALL    ACIA_IST                ; CHAR WAITING?
@@ -345,7 +350,7 @@ ACIA_OUT:
 ;
 ;
 ;
-#IF (INTMODE != 1)
+#IF (ACIA_INTS == 0)
 ;
 ACIA_IST:
         LD      C,(IY+3)                ; STATUS PORT
@@ -533,7 +538,7 @@ ACIA_INITSAFE:
 ;
 ACIA_INITGO:
 ;
-#IF (INTMODE == 1)
+#IF (ACIA_INTS)
         OR      %10000000               ; ENABLE RCV INT
 #ENDIF
 ;
@@ -553,7 +558,7 @@ ACIA_INITGO:
         LD      A,(ACIA_CMD)            ; RESTORE CONFIG VALUE
         OUT     (C),A                   ; DO IT
 ;
-#IF (INTMODE == 1)
+#IF (ACIA_INTS)
 ;
         ; RESET THE RECEIVE BUFFER
         LD      E,(IY+6)
@@ -681,7 +686,7 @@ ACIA_DEV        .DB     0               ; DEVICE NUM USED DURING INIT
 ACIA_CMD        .DB     0               ; COMMAND PORT SHADOW REGISTER
 ACIA_NEWCFG     .DW     0               ; TEMP STORE FOR NEW CFG
 ;
-#IF (INTMODE != 1)
+#IF (ACIA_INTS == 0)
 ;
 ACIA0_RCVBUF    .EQU    0
 ACIA1_RCVBUF    .EQU    0
@@ -730,7 +735,7 @@ ACIA0_CFG:
 ;
 	DEVECHO	"ACIA: IO="
 	DEVECHO	ACIA0BASE
-#IF (INTMODE == 1)
+#IF (ACIA_INTS)
 	DEVECHO	", INTERRUPTS ENABLED"
 #ENDIF
 	DEVECHO	"\n"
@@ -753,7 +758,7 @@ ACIA1_CFG:
 ;
 	DEVECHO	"ACIA: IO="
 	DEVECHO	ACIA1BASE
-#IF (INTMODE == 1)
+#IF (ACIA_INTS)
 	DEVECHO	", INTERRUPTS ENABLED"
 #ENDIF
 	DEVECHO	"\n"

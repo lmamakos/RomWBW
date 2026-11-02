@@ -23,14 +23,14 @@ and is developed in a seperate git repo.
 ## Design decisions
 
 - 512K "ROM" = the .BIN image the FPGA loads into SDRAM at physical
-  address 0 (16K pages 0-31).  512K "RAM" = the SDRAM immediately
-  above it (pages 32-63, physical 0x40000-0x7FFFF).  This is the
-  canonical Z2 512+512 layout, so the standard `MM_Z2` memory manager
-  is reused unmodified:
+  address 0 (16K pages 0-31).  2048K "RAM" = the SDRAM immediately
+  above it (pages 32 and up).  This is the standard Z2 layout with a
+  larger RAM, so the standard `MM_Z2` memory manager is reused
+  unmodified:
   - Frame registers `MPGSEL_0..3` = I/O ports 0xB0-0xB3
-  - `ROMSIZE=512` / `RAMSIZE=512` make all of the standard bank math
+  - `ROMSIZE=512` / `RAMSIZE=2048` make all of the standard bank math
     work: `HBX_BNKSEL` adds `ROMSIZE/32` (16 banks) for RAM, and the
-    common top-32K maps to physical pages 62/63.
+    common top-32K maps to the last two pages of RAM.
 - MMU initialization (the MM_Z2 section of `Source/HBIOS/hbios.asm`)
   runs the standard setup (ROMBOOT low-page writes + common-area
   frame 2/3 setup), except the `OUT (MPGENA),A` enable write is
@@ -55,11 +55,29 @@ and is developed in a seperate git repo.
   `DEFSERCFG` is report-only.  `ACIA0CLK`/`ACIA1CLK` are set to 153600
   (9600 x 16) only so that the driver's baud-rate check accepts 9600
   with its divide-by-16 setting; the video terminal has no baud rate.
-- `INTMODE=0`: the T80's `int_n` input is tied high in
-  `MicrocomputerZ80CPM.vhd`, so no interrupts are available and all
-  I/O is polled.  There is no RTC/clock driver yet, so CP/M time is
-  not maintained (see Future work).  The CPU runs at 10 MHz
-  (50 MHz core clock divided by 5).
+- `INTMODE=1`: the only source on the Z80 `INT` pin is the IntervalTimer
+  (`Components/TIMER/IntervalTimer.vhd`, ports 0xD0-0xD3); the ACIAs'
+  interrupt outputs are not connected, so all character and disk I/O is
+  still polled.  The timer is driven by its own HBIOS module,
+  `Source/HBIOS/itim.asm` (enabled by `ITIMENABLE`, base `ITIMIO`), which
+  follows the `sctim.asm` pattern: PREINIT stops the timer, probes it by
+  reading back the INTERVAL registers and hooks `ITIM_INT` into the IM1 call
+  list; INIT programs INTERVAL = 1000 / `TICKFREQ` ms and starts it
+  periodic (auto-restart).  `ITIM_INT` acknowledges the level interrupt and
+  chains to `HB_TIMINT`, which maintains `HB_TICKS`/`HB_SECS` (SYSGET TIMER,
+  boot timeout).  `TICKFREQ` must divide 1000 (default 50 Hz = 20 ms);
+  other values fail the build.  A missed tick (interrupts masked > 1
+  interval) sets the sticky OVERFLOW status bit but is not compensated.
+  Wall-clock time comes from the DS12887 via the stock DS12RTC driver
+  (`DS12RTC_BASE`=0x70).  The CPU runs at 10 MHz (50 MHz core clock
+  divided by 5).
+- `ACIAINTS=FALSE`: with `INTMODE=1` the stock ACIA driver would switch to
+  interrupt driven receive, where input is only taken from the IM1 call
+  list.  The ACIAs' INT outputs are not wired, and the timer handler would
+  claim every interrupt first, so console input would never arrive.
+  `ACIAINTS` (new in `acia.asm`, default TRUE in `cfg_MASTER.asm` so other
+  platforms are unchanged: RC2014_std.rom is byte-identical) keeps the
+  ACIAs polled while `INTMODE` is 1.
 
 
 ## MrZ80 I/O ports used by RomWBW
@@ -77,6 +95,7 @@ and is developed in a seperate git repo.
 | `0xB4`-`0xB7` | MMU frame 0-3 page registers, high byte (pages > 255; unused here since the max page number is 63). |
 | `0xB8`-`0xBC` | MMU direct-access window (4 pointer bytes + data port; unused). |
 | `0xBD`-`0xBF` | MMU reserved (reads 0, writes ignored). `MPGENA` is set to 0xBD. |
+| `0xD0`-`0xD3` | Interval timer / Z80 `INT` source (`IntervalTimer.vhd`), driven by `itim.asm` (`ITIMIO`). INTERVAL lo/hi at +0/+1, CONTROL (w) / STATUS (r) at +2, COMMAND (w) / STATUS (r) at +3. Level interrupt; STATUS bit 3 = INTREQ, ACK = COMMAND bit 1. |
 
 
 ## Technical background details
@@ -112,9 +131,10 @@ image is preloaded and execution starts at logical 0x0000.
 
 ### RAM disk
 
-The 512K of RomWBW RAM occupies SDRAM pages 32-63, immediately above
-the 512K ROM image, giving the standard 512K-ROM bank layout: 12 ROM
-disk banks (384K) and 8 RAM disk banks (256K).
+The 2048K of RomWBW RAM occupies the SDRAM immediately above the 512K
+ROM image (starting at page 32).  The build reports 16 ROM banks (12 of
+them the 384K ROM disk), 64 RAM banks (48 of them the 1536K RAM disk)
+and 11 application banks.
 
 ### Serial ports
 
@@ -132,8 +152,8 @@ low; `n_dcd` is hardwired low but `n_cts` comes from the FPGA pin.
 
 ## Future work / TODO
 
-- Real-time clock driver based on the BenchTimer at 0xC0-0xCF (ms
-  channels) once that peripheral is tested.  Until then CP/M time is
-  not maintained.
+- Wire the ACIA interrupt outputs to the Z80 `INT` pin (HDL change),
+  then set `ACIAINTS` TRUE for interrupt driven receive.  Only the
+  interval timer drives `INT` today.
 
 - Add sound device(s)

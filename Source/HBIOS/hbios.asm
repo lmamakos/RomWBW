@@ -9145,6 +9145,7 @@ HB_MODSTART	.EQU	$
 ;  - DMA
 ;  - NABU
 ;  - EZ80TMR
+;  - ITIM
 ;
 #IF (FPENABLE)
   #INCLUDE "fp.asm"
@@ -9168,6 +9169,10 @@ HB_MODSTART	.EQU	$
 ;
 #IF (SCTIMENABLE)
   #INCLUDE "sctim.asm"
+#ENDIF
+;
+#IF (ITIMENABLE)
+  #INCLUDE "itim.asm"
 #ENDIF
 ;
 #IF (I2CPCFENABLE)
