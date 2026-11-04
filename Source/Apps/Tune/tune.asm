@@ -57,6 +57,7 @@
 ;   2026-01-24 [WBW] Support RC2014 platform id
 ;   2026-01-31 [WBW] Update MUTE funtion to zero all PSG registers
 ;   2026-02-03 [JMD] Add Coleco (50H/51H/52H) auto-detect 
+;   2026-11-04 [LM] Add MrZ80 (platform 29) auto-detect, YM2149 at 50H/51H
 ;_______________________________________________________________________________
 ;
 ; ToDo:
@@ -702,8 +703,8 @@ CFGSIZ	.EQU	$ - CFGTBL
 	.DB	27,	$50,	$51,	$52,	$FF,	$FF,	$FF	; RC2014 W/ RC SOUND MODULE (COLECO)
 	.DW	HWSTR_COLECO
 ;
-	.DB	29,	$50,	$51,	$52,	$FF,	$FF,	$FF	; GENERIC COLECO AY PORTS (50H/51H, READ AT 52H)
-	.DW	HWSTR_COLECO
+	.DB	29,	$50,	$51,	$51,	$FF,	$FF,	$FF	; MRZ80 YM2149 PSG (SELECT AT 50H, DATA AT 51H, READ BACK AT 51H)
+	.DW	HWSTR_MRZ80
 ;
 	.DB	$FF					; END OF TABLE MARKER
 ;
@@ -782,6 +783,7 @@ HWSTR_HEATH	.DB	"HEATH H8 MSX Module",0
 HWSTR_MSX	.DB	"MSX Standard Ports (A0H/A1H)",0
 HWSTR_RC	.DB	"RCBus Standard Ports (D8H/D0H)",0
 HWSTR_COLECO	.DB	"RCBus Coleco Ports (50H/51H)",0
+HWSTR_MRZ80	.DB	"MrZ80 YM2149 PSG (50H/51H)",0
 
 MSGUNSUP	.db	"MYM files not supported with HBIOS yet!\r\n", 0
 

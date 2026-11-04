@@ -94,6 +94,14 @@ and is developed in a seperate git repo.
   that knows about it (vibetune: VTUNECFG dual-card, second card "EB").
   Both ports of each pair read back the selected register.  Stereo
   panning (Mono/ABC/ACB) is an MrZ80 OSD option, not a RomWBW setting.
+  Note that TUNE.COM does its own chip detection on top of the driver: it
+  writes R2 = 0AAh and reads it back from the third column (RIN) of its
+  config table.  Every Coleco row there uses 0x52, the RC Sound Module's read
+  port, which the MrZ80 does not decode, so the platform-29 row uses
+  RIN = 0x51 instead - the chip answers reads on both ports of its pair.
+  With that row present plain `TUNE file.pt3` should find the chip too
+  (hardware check pending); `-coleco` (which skips the probe) and `--hbios`
+  (which plays through the driver) work either way.
 
 
 ## MrZ80 I/O ports used by RomWBW
@@ -170,6 +178,8 @@ low; `n_dcd` is hardwired low but `n_cts` comes from the FPGA pin.
 
 ## Future work / TODO
 
-- Sound: hardware-test the AY driver on the MrZ80 (`TUNE.COM` on a PT3),
-  then vibetune single-chip and dual-card.  A second AY driver instance
-  for device 2 (0x68/0x60) would need `ay.asm` changes; not planned.
+- Sound: hardware-test plain `TUNE file.pt3` (no switch) with the new
+  platform-29 auto-detect row, then vibetune single-chip and dual-card.
+  `TUNE.COM` on a PT3 with `-coleco` already plays on hardware.  A second
+  AY driver instance for device 2 (0x68/0x60) would need `ay.asm` changes;
+  not planned.
