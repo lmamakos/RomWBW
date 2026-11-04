@@ -55,10 +55,13 @@ and is developed in a seperate git repo.
   `DEFSERCFG` is report-only.  `ACIA0CLK`/`ACIA1CLK` are set to 153600
   (9600 x 16) only so that the driver's baud-rate check accepts 9600
   with its divide-by-16 setting; the video terminal has no baud rate.
-- `INTMODE=1`: the only source on the Z80 `INT` pin is the IntervalTimer
-  (`Components/TIMER/IntervalTimer.vhd`, ports 0xD0-0xD3); the ACIAs'
-  interrupt outputs are not connected, so all character and disk I/O is
-  still polled.  The timer is driven by its own HBIOS module,
+- `INTMODE=1`: three sources drive the Z80 `INT` pin, ANDed (active low)
+  in the MrZ80 core: the IntervalTimer (`Components/TIMER/IntervalTimer.vhd`,
+  ports 0xD0-0xD3) and the two ACIAs' interrupt outputs (MrZ80 commit
+  `6dc802c`).  Each handler in the IM1 call list checks its own device's
+  status and returns "not handled" if the request is not its own, so they
+  share the level interrupt.  Disk I/O is still polled.  The timer is
+  driven by its own HBIOS module,
   `Source/HBIOS/itim.asm` (enabled by `ITIMENABLE`, base `ITIMIO`), which
   follows the `sctim.asm` pattern: PREINIT stops the timer, probes it by
   reading back the INTERVAL registers and hooks `ITIM_INT` into the IM1 call
@@ -71,13 +74,26 @@ and is developed in a seperate git repo.
   Wall-clock time comes from the DS12887 via the stock DS12RTC driver
   (`DS12RTC_BASE`=0x70).  The CPU runs at 10 MHz (50 MHz core clock
   divided by 5).
-- `ACIAINTS=FALSE`: with `INTMODE=1` the stock ACIA driver would switch to
-  interrupt driven receive, where input is only taken from the IM1 call
-  list.  The ACIAs' INT outputs are not wired, and the timer handler would
-  claim every interrupt first, so console input would never arrive.
-  `ACIAINTS` (new in `acia.asm`, default TRUE in `cfg_MASTER.asm` so other
-  platforms are unchanged: RC2014_std.rom is byte-identical) keeps the
-  ACIAs polled while `INTMODE` is 1.
+- `ACIAINTS=TRUE` (commit `9f384430`): interrupt driven ACIA receive,
+  where input is taken from the IM1 call list into the driver's ring
+  buffer.  `ACIAINTS` (new in `acia.asm`, default TRUE in
+  `cfg_MASTER.asm` so other platforms are unchanged: RC2014_std.rom is
+  byte-identical) was added when the ACIAs' INT outputs were not yet
+  wired: with `INTMODE=1` the driver would then have waited for receive
+  interrupts that never came, so `cfg_MRZ80.asm` set it FALSE to keep the
+  ACIAs polled.  Set it FALSE again to go back to polling (for example on
+  an older MrZ80 core without the ACIA INT wiring).
+- Sound = the stock AY driver (`ay.asm`) with `AYENABLE=TRUE`,
+  `AYMODE=AYMODE_COLECO`, `AY_CLK=1789772`.  The MrZ80 has two YM2149s
+  (`Components/PSG/MrZ80_PSG.sv`, MrZ80 `HARDWARE.md` "PSG sound"):
+  device 1 at 0x50 (select) / 0x51 (data) is exactly the Coleco port
+  layout, and the PSG runs at the MSX clock, so the driver needs no
+  changes.  Its probe (write R2 = 55h, read it back from 0x51) finds the
+  chip; the boot banner shows `AY: MODE=COLECO IO=0x50`.  RomWBW drives
+  only one AY; device 2 at 0x68 (select) / 0x60 (data) is for software
+  that knows about it (vibetune: VTUNECFG dual-card, second card "EB").
+  Both ports of each pair read back the selected register.  Stereo
+  panning (Mono/ABC/ACB) is an MrZ80 OSD option, not a RomWBW setting.
 
 
 ## MrZ80 I/O ports used by RomWBW
@@ -85,6 +101,8 @@ and is developed in a seperate git repo.
 | Port(s) | Function |
 |---------|----------|
 | `0x38`  | ROM-disable trigger. Any write disables the boot ROM at 0x0000-0x1FFF. Not needed when the .BIN is preloaded (ROM is already off). |
+| `0x50`-`0x51` | PSG device 1 (YM2149): 0x50 register select, 0x51 data; both read the selected register. Driven by `ay.asm` (`AYMODE_COLECO`). Select values 0x80-0x99 reach the MrZ80 stereo mixer registers (not used by RomWBW). |
+| `0x60`, `0x68` | PSG device 2 (YM2149): 0x68 register select, 0x60 data. Not used by RomWBW (vibetune's "EB" second card). |
 | `0x80`  | Video terminal + keyboard (6850 model): status (read) / control (write). ACIA unit 1. |
 | `0x81`  | Video terminal: keyboard (read) / display (write). |
 | `0x82`  | bufferedUART: status (read) / control (write). ACIA unit 0. |
@@ -152,8 +170,6 @@ low; `n_dcd` is hardwired low but `n_cts` comes from the FPGA pin.
 
 ## Future work / TODO
 
-- Wire the ACIA interrupt outputs to the Z80 `INT` pin (HDL change),
-  then set `ACIAINTS` TRUE for interrupt driven receive.  Only the
-  interval timer drives `INT` today.
-
-- Add sound device(s)
+- Sound: hardware-test the AY driver on the MrZ80 (`TUNE.COM` on a PT3),
+  then vibetune single-chip and dual-card.  A second AY driver instance
+  for device 2 (0x68/0x60) would need `ay.asm` changes; not planned.
