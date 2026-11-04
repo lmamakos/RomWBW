@@ -57,15 +57,28 @@ DIFFPATH = $(DIFFTO)/Binary
 
 hd512_%.img: %.def
 	@echo "Generating hd512 disk image ""$@"" using $^"; \
-	files=`grep -vEh "^\s*\#" $^ | grep -vEh "^\s*$$" | tr -d '\r' | awk '{print "hd512_" $$0 ".img"}'`; \
+	files=`grep -vEh "^\s*\#" $< | grep -vEh "^\s*$$" | tr -d '\r' | awk '{print "hd512_" $$0 ".img"}'`; \
 	echo "   " $${files}; \
 	cat $(HD512PREFIX) $${files} > $@
 
 hd1k_%.img: %.def
 	@echo "Generating hd1k disk image ""$@"" using $^"; \
-	files=`grep -vEh "^\s*\#" $^ | grep -vEh "^\s*$$" | tr -d '\r' | awk '{print "hd1k_" $$0 ".img"}'`; \
+	files=`grep -vEh "^\s*\#" $< | grep -vEh "^\s*$$" | tr -d '\r' | awk '{print "hd1k_" $$0 ".img"}'`; \
 	echo "   " $${files}; \
 	cat $(HD1KPREFIX) $${files} > $@
+
+# The aggregate images above are made by concatenating the slice images named
+# in the .def list, but that list is computed by the shell, so make cannot see
+# it as a prerequisite.  Without it, changing anything that goes into a slice
+# (an app, a system image) rebuilds the slices but leaves the aggregate stale,
+# and the stale file is then copied to Binary/ and onto media looking perfectly
+# up to date.  Work the same list out here and hang it on the targets
+# explicitly.  (Slice names are read as "lines that start with a name", which
+# skips comments and blank lines without needing to quote a hash sign.)
+$(foreach d,$(notdir $(wildcard *.def)),\
+  $(eval SLICES_$(basename $d) := $(shell sed -n 's/^[[:space:]]*\([A-Za-z0-9_.-][A-Za-z0-9_.-]*\)[[:space:]]*$$/\1/p' $d))\
+  $(eval hd1k_$(basename $d).img: $(d) $(addprefix hd1k_,$(addsuffix .img,$(SLICES_$(basename $d)))) $(HD1KPREFIX))\
+  $(eval hd512_$(basename $d).img: $(d) $(addprefix hd512_,$(addsuffix .img,$(SLICES_$(basename $d))))))
 
 #
 # this somewhat impenetrable and fragile code is used to build each of the images
