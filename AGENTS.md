@@ -18,6 +18,16 @@ and is developed in a seperate git repo.
   4 x 32K HBIOS banks (HBIOS, loader/OS, apps, utils) followed by the
   384K ROM disk.  Rename it to `.bin` if the MiSTer tooling requires
   that extension.
+- CP/M apps ship on the hard disk images, not in the ROM: `Binary/Apps/*.com`
+  are packed by `make -C Source/Images` into the per-distro slices
+  (`hd1k_cpm22.img`, `hd1k_cpm3.img`, ...) and then concatenated into the
+  aggregates `hd1k_combo.img` and `hd1k_all.img`, which is what gets copied to
+  the SD card.  Rebuild both levels after changing an app, and copy the results
+  to `Binary/`.  Since 7017ab05 the aggregates depend on the slices they
+  contain; before that an app change refreshed the slices and left stale
+  aggregates behind, so a freshly built image could still hold the old program.
+  To replace a mounted image cleanly, move the old file aside and write a new
+  one (the core keeps the renamed inode open).
 
 
 ## Design decisions
@@ -99,9 +109,10 @@ and is developed in a seperate git repo.
   config table.  Every Coleco row there uses 0x52, the RC Sound Module's read
   port, which the MrZ80 does not decode, so the platform-29 row uses
   RIN = 0x51 instead - the chip answers reads on both ports of its pair.
-  With that row present plain `TUNE file.pt3` should find the chip too
-  (hardware check pending); `-coleco` (which skips the probe) and `--hbios`
-  (which plays through the driver) work either way.
+  With that row present plain `TUNE file.pt3` finds the chip too, verified on
+  hardware 2026-11-04 (`TUNE VICTORY.PT3` prints
+  `MrZ80 YM2149 PSG (50H/51H), timer mode` and plays); `-coleco` (which skips
+  the probe) and `--hbios` (which plays through the driver) work either way.
 
 
 ## MrZ80 I/O ports used by RomWBW
@@ -178,8 +189,7 @@ low; `n_dcd` is hardwired low but `n_cts` comes from the FPGA pin.
 
 ## Future work / TODO
 
-- Sound: hardware-test plain `TUNE file.pt3` (no switch) with the new
-  platform-29 auto-detect row, then vibetune single-chip and dual-card.
-  `TUNE.COM` on a PT3 with `-coleco` already plays on hardware.  A second
-  AY driver instance for device 2 (0x68/0x60) would need `ay.asm` changes;
-  not planned.
+- Sound: hardware-test vibetune single-chip and dual-card.  Plain
+  `TUNE file.pt3` (auto-detect) and `TUNE file.pt3 -coleco` both play on
+  hardware (2026-11-04).  A second AY driver instance for device 2
+  (0x68/0x60) would need `ay.asm` changes; not planned.
