@@ -702,6 +702,9 @@ CFGSIZ	.EQU	$ - CFGTBL
 	.DB	27,	$50,	$51,	$52,	$FF,	$FF,	$FF	; RC2014 W/ RC SOUND MODULE (COLECO)
 	.DW	HWSTR_COLECO
 ;
+	.DB	29,	$50,	$51,	$52,	$FF,	$FF,	$FF	; GENERIC COLECO AY PORTS (50H/51H, READ AT 52H)
+	.DW	HWSTR_COLECO
+;
 	.DB	$FF					; END OF TABLE MARKER
 ;
 ; The following are table entries (like above), but not part of auto
