@@ -130,7 +130,7 @@ and is developed in a seperate git repo.
 | `0x90`-`0x97` | HPS image block device (`hps_blockdev.vhd`), driven by `mrz80sd.asm` (unit 1 of the MRZ80SD driver). Size registers at +5..+7. |
 | `0xB0`-`0xB3` | MMU frame 0-3 page registers, low byte (Z2-compatible). |
 | `0xB4`-`0xB7` | MMU frame 0-3 page registers, high byte (pages > 255; unused here since the max page number is 63). |
-| `0xB8`-`0xBC` | MMU direct-access window (4 pointer bytes + data port; unused). |
+| `0xB8`-`0xBC` | MMU direct-access window: 4 pointer bytes (LSB at 0xB8) + data port 0xBC (post-increments). Used by `HBX_BNKCPY`, `HBX_PEEK` and `HBX_POKE` when `MRZ80DAENABLE` (`MRZ80DABASE`=0xB8). |
 | `0xBD`-`0xBF` | MMU reserved (reads 0, writes ignored). `MPGENA` is set to 0xBD. |
 | `0xD0`-`0xD3` | Interval timer / Z80 `INT` source (`IntervalTimer.vhd`), driven by `itim.asm` (`ITIMIO`). INTERVAL lo/hi at +0/+1, CONTROL (w) / STATUS (r) at +2, COMMAND (w) / STATUS (r) at +3. Level interrupt; STATUS bit 3 = INTREQ, ACK = COMMAND bit 1. |
 
@@ -165,6 +165,48 @@ memory maps to the loaded image (reset mapping: frame 0 -> SDRAM
 page 0, frames 1-3 -> SDRAM pages 1-3).  The boot ROM (in the 64K
 Block RAM at physical 0x8000000) is disabled whenever the SDRAM
 image is preloaded and execution starts at logical 0x0000.
+
+#### Inter-bank copy, peek and poke through the direct-access port
+
+`MRZ80DAENABLE` (default FALSE in `cfg_MASTER.asm`, TRUE in
+`cfg_MRZ80.asm`) replaces the bounce-buffer bank copy and the
+bank-switching peek/poke in the HBIOS proxy (`hbios.asm`) with the MMU
+direct-access port.  All other platforms build byte-identical ROMs, as
+does MRZ80 with the flag FALSE.
+
+- `HBX_DAPTR` loads the pointer with the physical address of bank A,
+  address HL, using the same mapping as `HBX_BNKSEL`: 32K bank index =
+  ROM bank ID, or RAM bank ID - $80 + `ROMSIZE`/32; an address at or
+  above $8000 is always in the common bank (`BID_COM`).  It sits above
+  the IVT, in space freed from `HBX_BUF`.
+- `HBX_BNKCPY` maps the destination bank once and reads the source
+  through port 0xBC with `INIR`.  The pointer walks physical memory but
+  a logical source crossing $8000 must continue in common, so the source
+  moves in pieces that end on its 256-byte page boundaries and the
+  pointer is reloaded for each piece.  Interrupts stay masked during the
+  copy, as before.  Roughly 22 T-states per byte instead of 48, before
+  SDRAM wait states.  It returns like `LDIR` (and like the bounce copy):
+  HL = source + length, DE = destination + length, BC = 0.  CP/M 3's
+  `?MOVE` (`Source/CPM3/move.z80`) calls `HB_BNKCPY` at FFF6h directly
+  and keeps HL/DE as the next addresses; the first version returned them
+  swapped, and CP/M 3 and ZPM3/Z3PLUS fell back to the boot loader
+  while CP/M 2.2 and ZSDOS ran.  `testing/bnktest.asm` in the MrZ80
+  repo checks this (its pass 1b).
+- Verified on hardware 2026-11-24: `BNKTEST` passes; CP/M 2.2 and
+  Z-System from the ROM disk, and CP/M 3 and Z3PLUS from SD slices, boot
+  and run.  Timings from `BNKTEST` (HBIOS calls included): bank copy
+  1992 us/KB against 4160 us/KB with the bounce buffer (2.09x); one
+  SYSPEEK 108 us against 119 us (the HBIOS call itself is about 70 us of
+  that).
+- `HBX_PEEK`/`HBX_POKE` load the pointer and do one `IN`/`OUT`: no bank
+  switch, no stack switch.  `SYS_PEEK`/`SYS_POKE` still mask interrupts
+  around the call, which keeps loading the pointer and the access atomic.
+- `HBX_BUFSIZ` drops from 64 to 16 bytes: the buffer is now only
+  `HBX_INVOKE`'s temporary stack.  The build therefore rejects
+  `MDFFENABLE` (flash routines run from `HBX_BUF`), and any memory
+  manager other than `MM_Z2` on a Z80.  Proxy space: INT stack 64 bytes
+  (was 44), TEMP stack 36 bytes (was 22).
+- Rule: nothing that runs at interrupt level may use ports 0xB8-0xBC.
 
 ### RAM disk
 
